@@ -49,7 +49,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
 # Install prisma globally or locally to ensure 'npx prisma' works without downloading
-RUN npm install prisma
+#RUN npm install prisma
 
 # Create data directory
 RUN mkdir -p /app/data
