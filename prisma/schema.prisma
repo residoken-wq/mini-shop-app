@@ -1,0 +1,92 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum cho loại đối tác và đơn hàng
+enum PartnerType {
+  CUSTOMER
+  SUPPLIER
+}
+
+enum OrderType {
+  SALES      // Bán ra
+  PURCHASE   // Nhập vào
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+// 1. Quản lý Sản phẩm & Kho
+model Product {
+  id           String      @id @default(cuid())
+  name         String
+  sku          String      @unique // Mã vạch
+  price        Decimal     @default(0) // Giá bán
+  costPrice    Decimal     @default(0) // Giá vốn
+  stock        Int         @default(0) // Tồn kho hiện tại
+  unit         String      @default("cái")
+  
+  orderItems   OrderItem[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+// 2. Quản lý Đối tác (Khách hàng / NCC)
+model Partner {
+  id           String      @id @default(cuid())
+  name         String
+  phone        String?
+  type         PartnerType
+  address      String?
+  debtAmount   Decimal     @default(0) // Công nợ hiện tại
+  
+  orders       Order[]
+  transactions DebtTransaction[]
+  createdAt    DateTime    @default(now())
+}
+
+// 3. Đơn hàng (Mua & Bán)
+model Order {
+  id          String      @id @default(cuid())
+  code        String      @unique // Mã đơn hàng (VD: DH001)
+  type        OrderType
+  partnerId   String?
+  partner     Partner?    @relation(fields: [partnerId], references: [id])
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @default(0)
+  note        String?
+  
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+}
+
+// Chi tiết đơn hàng
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal // Giá tại thời điểm giao dịch
+}
+
+// 4. Thu/Chi & Lịch sử công nợ
+model DebtTransaction {
+  id          String   @id @default(cuid())
+  partnerId   String
+  partner     Partner  @relation(fields: [partnerId], references: [id])
+  amount      Decimal  // Dương: Nợ thêm, Âm: Trả nợ
+  description String?
+  createdAt   DateTime @default(now())
+}
