@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  name      String
+  sku       String   @unique
+  price     Float
+  cost      Float    @default(0)
+  stock     Int      @default(0)
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  orderItems OrderItem[]
+  inventoryTransactions InventoryTransaction[]
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  address   String?
+  debt      Float    @default(0)
+  createdAt DateTime @default(now())
+  
+  orders    Order[]
+  transactions Transaction[]
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  address   String?
+  debt      Float    @default(0)
+  createdAt DateTime @default(now())
+  
+  purchases Order[]  @relation("SupplierOrders")
+  transactions Transaction[]
+}
+
+model Order {
+  id        String   @id @default(uuid())
+  type      String   // "SALE" or "PURCHASE"
+  status    String   // "PENDING", "COMPLETED", "CANCELLED"
+  total     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  supplierId String?
+  supplier   Supplier? @relation("SupplierOrders", fields: [supplierId], references: [id])
+
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  type        String   // "INCOME", "EXPENSE", "DEBT_COLLECTION", "DEBT_PAYMENT"
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+
+  supplierId  String?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+}
+
+model InventoryTransaction {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  type      String   // "IN", "OUT", "ADJUSTMENT"
+  quantity  Int
+  date      DateTime @default(now())
+  note      String?
+}
