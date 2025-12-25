@@ -34,38 +34,31 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Run as root to avoid SQLite volume permission issues
+# RUN addgroup --system --gid 1001 nodejs
+# RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
 RUN mkdir .next
-RUN chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# Copy migration files for production usage
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
 
-USER nextjs
+# Install prisma globally or locally to ensure 'npx prisma' works without downloading
+RUN npm install prisma
+
+# Create data directory
+RUN mkdir -p /app/data
 
 EXPOSE 3000
 
 ENV PORT 3000
-# set hostname to localhost
 ENV HOSTNAME "0.0.0.0"
 
-# Note: We need to run migrations before starting the app. 
-# Ideally this is done in a startup script, but for simplicity we rely on 'npx prisma migrate deploy' being run separately or via entrypoint.
-# For SQLite in standalone, we need to ensure the DB file is accessible.
-
-# Ensure DB is synced (Caution: db push is for prototyping, migrate deploy is for prod)
-# Since we are using SQLite and volume, we use db push to ensure schema is applied to the new file if missing.
+# Ensure DB is synced. 
 CMD ["sh", "-c", "npx prisma db push && node server.js"]
 
