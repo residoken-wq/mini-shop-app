@@ -1,0 +1,12 @@
+# .gitignore
+node_modules/
+.next/
+build/
+dist/
+.env             <-- Quan trọng: Không lộ thông tin DB lên mạng
+.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+coverage/
