@@ -1,0 +1,22 @@
+version: '3.9'
+
+services:
+  web:
+    container_name: mini-shop-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3100:3000"
+    environment:
+      - DATABASE_URL=file:/app/data/prod.db
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data
+    networks:
+      - shop-network
+
+networks:
+  shop-network:
+    driver: bridge
