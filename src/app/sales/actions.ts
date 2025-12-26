@@ -15,6 +15,8 @@ export async function getCustomers() {
     });
 }
 
+import { generateCode } from "@/lib/generators";
+
 export async function createOrder(data: {
     customerId?: string;
     items: { productId: string; quantity: number; price: number }[];
@@ -25,11 +27,14 @@ export async function createOrder(data: {
     const { customerId, items, total, paid, paymentMethod } = data;
 
     try {
+        const soCode = await generateCode("SO");
+
         // Start transaction
         const result = await db.$transaction(async (tx) => {
             // 1. Create Order
             const order = await tx.order.create({
                 data: {
+                    code: soCode,
                     type: "SALE",
                     status: "COMPLETED", // Assuming immediate completion for POS
                     total: total,

@@ -9,12 +9,41 @@ export async function getProducts() {
     });
 }
 
-export async function createProduct(data: { name: string; sku: string; price: number; cost: number; stock: number; imageUrl?: string }) {
+import { generateSku } from "@/lib/generators";
+
+export async function getCategories() {
+    return await db.category.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function createCategory(name: string, code: string) {
     try {
+        const category = await db.category.create({
+            data: { name, code: code.toUpperCase() }
+        });
+        revalidatePath("/products");
+        return { success: true, category };
+    } catch (e) {
+        return { success: false, error: "Failed to create category" };
+    }
+}
+
+export async function createProduct(data: { name: string; categoryId: string; price: number; cost: number; stock: number; imageUrl?: string }) {
+    try {
+        // Get Category Code for SKU prefix
+        const category = await db.category.findUnique({ where: { id: data.categoryId } });
+        if (!category) return { success: false, error: "Category not found" };
+
+        const sku = await generateSku(category.code);
+
         const product = await db.product.create({
             data: {
-                ...data,
+                name: data.name,
+                sku: sku,
+                categoryId: data.categoryId,
+                price: data.price,
+                cost: data.cost,
                 stock: data.stock || 0,
+                imageUrl: data.imageUrl
             }
         });
 
@@ -34,6 +63,7 @@ export async function createProduct(data: { name: string; sku: string; price: nu
         revalidatePath("/sales");
         return { success: true, product };
     } catch (e) {
+        console.error(e);
         return { success: false, error: "Failed to create product" };
     }
 }

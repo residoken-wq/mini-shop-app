@@ -25,6 +25,8 @@ export async function createSupplier(data: { name: string; phone: string; addres
     }
 }
 
+import { generateCode } from "@/lib/generators";
+
 export async function createPurchaseOrder(data: {
     supplierId?: string;
     items: { productId: string; quantity: number; price: number }[];
@@ -35,10 +37,13 @@ export async function createPurchaseOrder(data: {
     const { supplierId, items, total, paid, paymentMethod } = data;
 
     try {
+        const poCode = await generateCode("PO");
+
         const result = await db.$transaction(async (tx) => {
             // 1. Create Purchase Order
             const order = await tx.order.create({
                 data: {
+                    code: poCode,
                     type: "PURCHASE",
                     status: "COMPLETED",
                     total: total,
