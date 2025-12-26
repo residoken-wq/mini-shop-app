@@ -127,6 +127,31 @@ export function ProductList({ initialProducts }: ProductListProps) {
         setHistoryList(history);
     };
 
+    // Market State
+    const [isMarketOpen, setIsMarketOpen] = useState(false);
+    const [marketProducts, setMarketProducts] = useState<MarketProduct[]>([]);
+    const [isLoadingMarket, setIsLoadingMarket] = useState(false);
+
+    const handleScanMarket = async () => {
+        setIsLoadingMarket(true);
+        setIsMarketOpen(true);
+        const res = await getMarketPrices();
+        setMarketProducts(res);
+        setIsLoadingMarket(false);
+    };
+
+    const handleImportMarket = async (mp: MarketProduct) => {
+        setNewProduct({
+            ...newProduct,
+            name: mp.name,
+            price: mp.price.toString(),
+            cost: (mp.price * 0.8).toString(), // Assume 20% margin
+            stock: "0",
+        });
+        setIsMarketOpen(false);
+        setIsCreateOpen(true);
+    };
+
     return (
         <div className="space-y-4 h-full flex flex-col">
             {/* Toolbar */}
@@ -140,6 +165,11 @@ export function ProductList({ initialProducts }: ProductListProps) {
                         onChange={e => setSearchQuery(e.target.value)}
                     />
                 </div>
+
+                <Button variant="outline" onClick={handleScanMarket} disabled={isLoadingMarket}>
+                    <RefreshCw className={cn("mr-2 h-4 w-4", isLoadingMarket ? "animate-spin" : "")} />
+                    {isLoadingMarket ? "Đang quét..." : "Giá Chợ"}
+                </Button>
 
                 {/* Create Category */}
                 <Dialog open={isCatOpen} onOpenChange={setIsCatOpen}>
