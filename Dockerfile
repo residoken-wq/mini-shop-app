@@ -36,6 +36,9 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Run as root to avoid SQLite volume permission issues
 # RUN addgroup --system --gid 1001 nodejs
 # RUN adduser --system --uid 1001 nextjs
