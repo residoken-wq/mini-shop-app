@@ -110,6 +110,59 @@ export async function createProduct(data: { name: string; categoryId: string; pr
     }
 }
 
+export async function updateProduct(id: string, data: { name: string; categoryId: string; price: number; cost: number; stock?: number; imageUrl?: string }) {
+    try {
+        const product = await db.product.update({
+            where: { id },
+            data: {
+                name: data.name,
+                categoryId: data.categoryId,
+                price: data.price,
+                cost: data.cost,
+                // Stock is usually updated via adjustments, but we allow direct edit if needed used with care.
+                // However, better to leave stock management to Adjustments. 
+                // We will NOT update stock here unless explicitly requested, but for now let's skip stock to avoid conflict with transactions.
+                imageUrl: data.imageUrl
+            }
+        });
+        revalidatePath("/products");
+        revalidatePath("/sales");
+        return { success: true, product };
+    } catch (e) {
+        return { success: false, error: "Failed to update product" };
+    }
+}
+
+export async function deleteProduct(id: string) {
+    try {
+        // Check for dependencies? OrderItems, InventoryTransactions?
+        // If we force delete, we might break history. 
+        // Best practice: Soft delete or check. 
+        // For this app, let's block if there are OrderItems.
+        const orders = await db.orderItem.count({ where: { productId: id } });
+        if (orders > 0) {
+            return { success: false, error: "Cannot delete product with sales history" };
+        }
+
+        // Just delete transactions if no sales? Or block?
+        // Let's Cascade delete transactions manually or block.
+        // Let's block if stock > 0
+        const product = await db.product.findUnique({ where: { id } });
+        if (product && product.stock > 0) {
+            return { success: false, error: "Cannot delete product with stock > 0" };
+        }
+
+        // Delete transactions first?
+        await db.inventoryTransaction.deleteMany({ where: { productId: id } });
+        await db.product.delete({ where: { id } });
+
+        revalidatePath("/products");
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Failed to delete product" };
+    }
+}
+
 export async function adjustStock(data: { productId: string; type: "IN" | "OUT" | "ADJUSTMENT"; quantity: number; note?: string }) {
     const { productId, type, quantity, note } = data;
 

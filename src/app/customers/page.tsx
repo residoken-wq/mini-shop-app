@@ -1,3 +1,10 @@
-export default function CustomersPage() {
-    return <div>Customers Module</div>
+import { getCustomers } from "./actions";
+import CustomersClient from "./customers-client";
+
+export const dynamic = 'force-dynamic';
+
+export default async function CustomersPage() {
+    const customers = await getCustomers();
+
+    return <CustomersClient initialCustomers={customers} />;
 }

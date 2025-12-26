@@ -42,6 +42,12 @@ export function MainNav({ className, setOpen, ...props }: MainNavProps) {
             active: pathname === "/products",
         },
         {
+            href: "/categories",
+            label: "Danh mục",
+            icon: Package, // Reusing Package icon or maybe List/Tags
+            active: pathname === "/categories",
+        },
+        {
             href: "/orders",
             label: "Đơn hàng",
             icon: FileText,

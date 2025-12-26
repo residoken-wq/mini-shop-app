@@ -30,7 +30,7 @@ export async function scrapeBinhDienMarket(): Promise<MarketProduct[]> {
 
         // Strategy: Find all price elements, then traverse up to find the container
 
-        $('.product-item, .box-product, .item').each((_, el) => {
+        $('.product-item, .box-product, .item').each((_: any, el: any) => {
             const container = $(el);
 
             // Name: usually h3 or a tag

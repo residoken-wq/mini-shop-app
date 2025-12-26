@@ -6,6 +6,11 @@ import { revalidatePath } from "next/cache";
 export async function getSuppliers() {
     return await db.supplier.findMany({
         orderBy: { name: "asc" },
+        include: {
+            _count: {
+                select: { purchases: true }
+            }
+        }
     });
 }
 
@@ -22,6 +27,39 @@ export async function createSupplier(data: { name: string; phone: string; addres
         return { success: true, supplier };
     } catch (e) {
         return { success: false, error: "Failed to create supplier" };
+    }
+}
+
+export async function updateSupplier(id: string, data: { name: string; phone: string; address?: string }) {
+    try {
+        const supplier = await db.supplier.update({
+            where: { id },
+            data: {
+                name: data.name,
+                phone: data.phone,
+                address: data.address
+            }
+        });
+        revalidatePath("/suppliers");
+        return { success: true, supplier };
+    } catch (e) {
+        return { success: false, error: "Failed to update supplier" };
+    }
+}
+
+export async function deleteSupplier(id: string) {
+    try {
+        // Check orders
+        const orders = await db.order.count({ where: { supplierId: id } });
+        if (orders > 0) {
+            return { success: false, error: "Cannot delete supplier with purchase orders" };
+        }
+
+        await db.supplier.delete({ where: { id } });
+        revalidatePath("/suppliers");
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Failed to delete supplier" };
     }
 }
 

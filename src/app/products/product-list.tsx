@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-    Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus, RefreshCw, Download
+    Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus, RefreshCw, Download, Edit, Trash2
 } from "lucide-react";
-import { createProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices, bulkImportMarketProducts } from "./actions";
+import { createProduct, updateProduct, deleteProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices, bulkImportMarketProducts } from "./actions";
 import { cn } from "@/lib/utils";
 import { MarketProduct } from "@/lib/market-scraper";
 
@@ -28,9 +28,11 @@ export function ProductList({ initialProducts }: ProductListProps) {
     const [categories, setCategories] = useState<Category[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Create Product State
+    // Create/Edit Product State
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "" });
+    const [mode, setMode] = useState<"CREATE" | "EDIT">("CREATE");
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "", imageUrl: "" });
 
     // Create Category State
     const [isCatOpen, setIsCatOpen] = useState(false);
@@ -72,24 +74,79 @@ export function ProductList({ initialProducts }: ProductListProps) {
         }
     };
 
-    const handleCreateProduct = async () => {
+    const handleOpenCreate = () => {
+        setMode("CREATE");
+        setNewProduct({ name: "", categoryId: "", price: "", cost: "", stock: "", imageUrl: "" });
+        setIsCreateOpen(true);
+    };
+
+    const handleOpenEdit = (p: Product) => {
+        setMode("EDIT");
+        setSelectedProduct(p);
+        setNewProduct({
+            name: p.name,
+            categoryId: p.categoryId || "",
+            price: p.price.toString(),
+            cost: p.cost.toString(),
+            stock: p.stock.toString(),
+            imageUrl: p.imageUrl || ""
+        });
+        setIsCreateOpen(true);
+    };
+
+    const handleSaveProduct = async () => {
         if (!newProduct.categoryId) {
             alert("Vui lòng chọn danh mục");
             return;
         }
 
-        const res = await createProduct({
-            name: newProduct.name,
-            categoryId: newProduct.categoryId,
-            price: parseFloat(newProduct.price) || 0,
-            cost: parseFloat(newProduct.cost) || 0,
-            stock: parseInt(newProduct.stock) || 0
-        });
+        if (mode === "CREATE") {
+            const res = await createProduct({
+                name: newProduct.name,
+                categoryId: newProduct.categoryId,
+                price: parseFloat(newProduct.price) || 0,
+                cost: parseFloat(newProduct.cost) || 0,
+                stock: parseInt(newProduct.stock) || 0,
+                imageUrl: newProduct.imageUrl
+            });
 
-        if (res.success && res.product) {
-            setProducts(prev => [res.product!, ...prev]);
-            setIsCreateOpen(false);
-            setNewProduct({ name: "", categoryId: "", price: "", cost: "", stock: "" });
+            if (res.success && res.product) {
+                setProducts(prev => [res.product!, ...prev]);
+                setIsCreateOpen(false);
+            } else {
+                alert("Lỗi: " + res.error);
+            }
+        } else {
+            if (!selectedProduct) return;
+            const res = await updateProduct(selectedProduct.id, {
+                name: newProduct.name,
+                categoryId: newProduct.categoryId,
+                price: parseFloat(newProduct.price) || 0,
+                cost: parseFloat(newProduct.cost) || 0,
+                // stock: // Stock not updated here
+                imageUrl: newProduct.imageUrl
+            });
+
+            if (res.success && res.product) {
+                const updated = res.product!;
+                setProducts(prev => prev.map(p => p.id === updated.id ? { ...updated, stock: p.stock } : p)); // Keep local stock or refresh? Server returned product has correct stock.
+                setIsCreateOpen(false);
+            } else {
+                alert("Lỗi: " + res.error);
+            }
+        }
+    };
+
+    const handleDelete = async (p: Product) => {
+        if (p.stock > 0) {
+            alert("Không thể xóa sản phẩm còn tồn kho!");
+            return;
+        }
+        if (!confirm(`Xóa sản phẩm "${p.name}"?`)) return;
+
+        const res = await deleteProduct(p.id);
+        if (res.success) {
+            setProducts(prev => prev.filter(item => item.id !== p.id));
         } else {
             alert("Lỗi: " + res.error);
         }
@@ -141,12 +198,14 @@ export function ProductList({ initialProducts }: ProductListProps) {
     };
 
     const handleImportMarket = async (mp: MarketProduct) => {
+        setMode("CREATE");
         setNewProduct({
-            ...newProduct,
             name: mp.name,
+            categoryId: "", // User must select
             price: mp.price.toString(),
             cost: (mp.price * 0.8).toString(), // Assume 20% margin
             stock: "0",
+            imageUrl: mp.imageUrl || ""
         });
         setIsMarketOpen(false);
         setIsCreateOpen(true);
@@ -207,13 +266,13 @@ export function ProductList({ initialProducts }: ProductListProps) {
                     </DialogContent>
                 </Dialog>
 
-                {/* Create Product */}
+                {/* Create Product Button */}
+                <Button onClick={handleOpenCreate}><Plus className="mr-2 h-4 w-4" /> Thêm SP</Button>
+
+                {/* Dialog for Create/Edit */}
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button><Plus className="mr-2 h-4 w-4" /> Thêm SP</Button>
-                    </DialogTrigger>
                     <DialogContent>
-                        <DialogHeader><DialogTitle>Thêm Sản Phẩm Mới</DialogTitle></DialogHeader>
+                        <DialogHeader><DialogTitle>{mode === "CREATE" ? "Thêm Sản Phẩm Mới" : "Sửa Sản Phẩm"}</DialogTitle></DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right">Danh mục</Label>
@@ -243,13 +302,19 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                 <Label className="text-right">Giá Vốn</Label>
                                 <Input type="number" value={newProduct.cost} onChange={e => setNewProduct({ ...newProduct, cost: e.target.value })} className="col-span-3" />
                             </div>
+                            {mode === "CREATE" && (
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label className="text-right">Tồn Đầu</Label>
+                                    <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })} className="col-span-3" />
+                                </div>
+                            )}
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Tồn Đầu</Label>
-                                <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })} className="col-span-3" />
+                                <Label className="text-right">Link Ảnh</Label>
+                                <Input value={newProduct.imageUrl} onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })} className="col-span-3" placeholder="https://..." />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button onClick={handleCreateProduct}>Lưu</Button>
+                            <Button onClick={handleSaveProduct}>Lưu</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -282,9 +347,17 @@ export function ProductList({ initialProducts }: ProductListProps) {
                             <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => { setAdjustTarget(product); setIsAdjustOpen(true); }}>
                                 Kiểm kê
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistory(product)}>
-                                <History className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openHistory(product)}>
+                                    <History className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(product)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(product)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </CardFooter>
                     </Card>
                 ))}

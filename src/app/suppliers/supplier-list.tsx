@@ -1,0 +1,207 @@
+"use client";
+
+import { useState } from "react";
+import { Supplier } from "@prisma/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from "@/components/ui/table";
+import {
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Edit, Trash2, Plus, Search, MapPin, Phone, Truck } from "lucide-react";
+import { createSupplier, updateSupplier, deleteSupplier } from "./actions";
+
+interface SupplierListProps {
+    initialSuppliers: (Supplier & { _count: { purchases: number } })[];
+}
+
+export default function SupplierList({ initialSuppliers }: SupplierListProps) {
+    const [suppliers, setSuppliers] = useState(initialSuppliers);
+    const [search, setSearch] = useState("");
+
+    // Dialog State
+    const [isOpen, setIsOpen] = useState(false);
+    const [mode, setMode] = useState<"CREATE" | "EDIT">("CREATE");
+    const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+    const [formData, setFormData] = useState({ name: "", phone: "", address: "" });
+
+    const filtered = suppliers.filter(s =>
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.phone && s.phone.includes(search))
+    );
+
+    const handleOpenCreate = () => {
+        setMode("CREATE");
+        setFormData({ name: "", phone: "", address: "" });
+        setIsOpen(true);
+    };
+
+    const handleOpenEdit = (s: Supplier) => {
+        setMode("EDIT");
+        setSelectedSupplier(s);
+        setFormData({ name: s.name, phone: s.phone || "", address: s.address || "" });
+        setIsOpen(true);
+    };
+
+    const handleSubmit = async () => {
+        if (!formData.name) {
+            alert("Vui lòng nhập tên NCC");
+            return;
+        }
+
+        if (mode === "CREATE") {
+            const res = await createSupplier(formData);
+            if (res.success && res.supplier) {
+                setSuppliers([...suppliers, { ...res.supplier, _count: { purchases: 0 } }]);
+                setIsOpen(false);
+            } else {
+                alert("Lỗi: " + res.error);
+            }
+        } else {
+            if (!selectedSupplier) return;
+            const res = await updateSupplier(selectedSupplier.id, formData);
+            if (res.success && res.supplier) {
+                setSuppliers(suppliers.map(s => s.id === selectedSupplier.id ? { ...res.supplier!, _count: s._count } : s));
+                setIsOpen(false);
+            } else {
+                alert("Lỗi: " + res.error);
+            }
+        }
+    };
+
+    const handleDelete = async (id: string, count: number) => {
+        if (count > 0) {
+            alert("Không thể xóa NCC đã có đơn nhập hàng!");
+            return;
+        }
+        if (!confirm("Bạn có chắc muốn xóa NCC này?")) return;
+
+        const res = await deleteSupplier(id);
+        if (res.success) {
+            setSuppliers(suppliers.filter(s => s.id !== id));
+        } else {
+            alert("Lỗi: " + res.error);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Danh sách Nhà Cung Cấp</h2>
+                <Button onClick={handleOpenCreate}>
+                    <Plus className="mr-2 h-4 w-4" /> Thêm NCC
+                </Button>
+            </div>
+
+            <div className="flex items-center gap-2 max-w-sm">
+                <Search className="h-4 w-4" />
+                <Input
+                    placeholder="Tìm tên, sđt..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                />
+            </div>
+
+            <div className="border rounded-md">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Tên</TableHead>
+                            <TableHead>Liên hệ</TableHead>
+                            <TableHead>Địa chỉ</TableHead>
+                            <TableHead>Công nợ</TableHead>
+                            <TableHead className="text-right">Thao tác</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filtered.length > 0 ? filtered.map(s => (
+                            <TableRow key={s.id}>
+                                <TableCell className="font-medium">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                            <Truck className="h-4 w-4" />
+                                        </div>
+                                        {s.name}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    {s.phone ? (
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                            <Phone className="h-3 w-3" /> {s.phone}
+                                        </div>
+                                    ) : "---"}
+                                </TableCell>
+                                <TableCell>
+                                    {s.address ? (
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground line-clamp-1 max-w-[200px]" title={s.address}>
+                                            <MapPin className="h-3 w-3" /> {s.address}
+                                        </div>
+                                    ) : "---"}
+                                </TableCell>
+                                <TableCell>
+                                    <span className="text-red-500 font-bold">
+                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(s.debt)}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-right space-x-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(s)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(s.id, s._count.purchases)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                                    Chưa có dữ liệu
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{mode === "CREATE" ? "Thêm NCC" : "Sửa NCC"}</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Tên *</Label>
+                            <Input
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">SĐT</Label>
+                            <Input
+                                value={formData.phone}
+                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Địa chỉ</Label>
+                            <Input
+                                value={formData.address}
+                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                className="col-span-3"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleSubmit}>Lưu</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
