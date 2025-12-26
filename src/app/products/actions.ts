@@ -69,7 +69,7 @@ export async function getMarketPrices() {
     return await scrapeBinhDienMarket();
 }
 
-export async function createProduct(data: { name: string; categoryId: string; price: number; cost: number; stock: number; imageUrl?: string }) {
+export async function createProduct(data: { name: string; categoryId: string; price: number; cost: number; stock: number; unit?: string; imageUrl?: string }) {
     try {
         // Get Category Code for SKU prefix
         const category = await db.category.findUnique({ where: { id: data.categoryId } });
@@ -85,6 +85,7 @@ export async function createProduct(data: { name: string; categoryId: string; pr
                 price: data.price,
                 cost: data.cost,
                 stock: data.stock || 0,
+                unit: data.unit || "kg",
                 imageUrl: data.imageUrl
             }
         });
@@ -110,7 +111,7 @@ export async function createProduct(data: { name: string; categoryId: string; pr
     }
 }
 
-export async function updateProduct(id: string, data: { name: string; categoryId: string; price: number; cost: number; stock?: number; imageUrl?: string }) {
+export async function updateProduct(id: string, data: { name: string; categoryId: string; price: number; cost: number; unit?: string; stock?: number; imageUrl?: string }) {
     try {
         const product = await db.product.update({
             where: { id },
@@ -119,6 +120,7 @@ export async function updateProduct(id: string, data: { name: string; categoryId
                 categoryId: data.categoryId,
                 price: data.price,
                 cost: data.cost,
+                unit: data.unit || "kg",
                 // Stock is usually updated via adjustments, but we allow direct edit if needed used with care.
                 // However, better to leave stock management to Adjustments. 
                 // We will NOT update stock here unless explicitly requested, but for now let's skip stock to avoid conflict with transactions.

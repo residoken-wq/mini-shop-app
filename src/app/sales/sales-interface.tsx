@@ -41,6 +41,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
     const [marketPrices, setMarketPrices] = useState<MarketProduct[]>([]);
     const [isLoadingMarket, setIsLoadingMarket] = useState(false);
 
+    const [pendingItem, setPendingItem] = useState<CartItem | null>(null);
     const [isWalkIn, setIsWalkIn] = useState(false);
 
     // Customer Create State
@@ -97,6 +98,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
             }
             return [...prev, { product, quantity, customPrice }];
         });
+        setPendingItem(null); // Clear pending
     };
 
     const removeFromCart = (productId: string) => {
@@ -164,43 +166,45 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
 
     // --- VOICE LOGIC ---
     const handleVoiceCommand = (transcript: string) => {
-        // 1. Update search query to show feedback
         setSearchQuery(transcript);
-
         const lowerTranscript = transcript.toLowerCase();
 
-        // 2. Find best matching product (Longest substring match)
+        // COMMAND: "Tiếp" or "Thêm" -> Confirm Pending Item
+        if ((lowerTranscript.includes("tiếp") || lowerTranscript.includes("thêm")) && pendingItem) {
+            addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice);
+            setSearchQuery("");
+            return; // EXIT
+        }
+
+        // FIND PRODUCT
         // Sort products by name length descending to match "Cà chua bi" before "Cà chua"
         const sortedProducts = [...products].sort((a, b) => b.name.length - a.name.length);
-
         const matchedProduct = sortedProducts.find(p => lowerTranscript.includes(p.name.toLowerCase()));
 
         if (matchedProduct) {
-            // 3. Extract logic: [Product Name] [Quantity] [Price/Unit]
-            // Remove product name from string
+            // Remove product name from string to parse numbers
             const remaining = lowerTranscript.replace(matchedProduct.name.toLowerCase(), "").trim();
 
-            // Extract numbers
             const numbers = remaining.match(/\d+(\.\d+)?/g);
-
             let quantity = 1;
             let price = undefined;
 
             if (numbers && numbers.length > 0) {
                 quantity = parseFloat(numbers[0]);
-
                 if (numbers.length > 1) {
-                    // Normalize price: 20k -> 20000, 20 nghìn -> 20000
+                    // Logic: If user says "5 ký 20 nghìn", assume 2nd number is price
                     let rawPrice = parseFloat(numbers[1]);
-                    if (rawPrice < 1000) rawPrice *= 1000; // Assume shorthand (20 => 20000)
+                    if (rawPrice < 1000) rawPrice *= 1000;
                     price = rawPrice;
                 }
             }
 
-            addToCart(matchedProduct, quantity, price);
-
-            // Clear search after short delay
-            setTimeout(() => setSearchQuery(""), 1500);
+            // STAGING MODE: Set Pending Item instead of adding directly
+            setPendingItem({
+                product: matchedProduct,
+                quantity: quantity,
+                customPrice: price
+            });
         }
     };
 
@@ -239,14 +243,66 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                     "flex-1 flex flex-col gap-4 overflow-hidden",
                     mobileTab === "cart" ? "hidden lg:flex" : "flex"
                 )}>
-                    <div className="flex gap-2 shrink-0">
-                        <VoiceInput
-                            placeholder="Nói tên SP + số lượng (VD: Cà chua 5 ký 20 nghìn)..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onTranscript={handleVoiceCommand}
-                            className="flex-1"
-                        />
+                    <div className="flex gap-2 shrink-0 flex-col">
+                        <div className="flex gap-2">
+                            <VoiceInput
+                                placeholder="Nói tên SP + số lượng (VD: Cà chua 5 ký)..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onTranscript={handleVoiceCommand}
+                                className="flex-1"
+                            />
+                        </div>
+
+                        {/* PENDING ITEM CARD */}
+                        {pendingItem && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-4 items-center animate-in slide-in-from-top-2">
+                                <div className="bg-white p-2 rounded border shrink-0">
+                                    <span className="text-2xl font-bold text-primary">?</span>
+                                </div>
+                                <div className="flex-1 grid grid-cols-2 gap-2">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Sản phẩm</p>
+                                        <p className="font-bold text-lg text-primary">{pendingItem.product.name}</p>
+                                        <p className="text-xs text-muted-foreground">Kho: {pendingItem.product.stock} {pendingItem.product.unit}</p>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span>SL:</span>
+                                            <input
+                                                type="number"
+                                                className="w-16 border rounded px-1 text-right font-bold"
+                                                value={pendingItem.quantity}
+                                                onChange={(e) => setPendingItem({ ...pendingItem, quantity: parseFloat(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span>Giá:</span>
+                                            <input
+                                                type="number"
+                                                className="w-20 border rounded px-1 text-right text-blue-600 font-bold"
+                                                value={pendingItem.customPrice || pendingItem.product.price}
+                                                onChange={(e) => setPendingItem({ ...pendingItem, customPrice: parseFloat(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2 shrink-0">
+                                    <Button size="sm" onClick={() => addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice)}>
+                                        Thêm (Tiếp)
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="text-red-500 h-6" onClick={() => setPendingItem(null)}>
+                                        Hủy
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                        {/* Market Hint for Pending Item */}
+                        {pendingItem && marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase()) && (
+                            <div className="text-xs text-muted-foreground flex justify-between px-2">
+                                <span>Giá chợ tham khảo: <span className="font-bold text-orange-600">{new Intl.NumberFormat('vi-VN').format(marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase())!.price)}</span></span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-20">

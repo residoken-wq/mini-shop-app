@@ -32,6 +32,8 @@ model Product {
   
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
+  
+  unit       String    @default("kg") // e.g. "kg", "bó", "cái", "hộp"
 
   orderItems OrderItem[]
   inventoryTransactions InventoryTransaction[]

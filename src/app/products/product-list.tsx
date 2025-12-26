@@ -32,7 +32,10 @@ export function ProductList({ initialProducts }: ProductListProps) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [mode, setMode] = useState<"CREATE" | "EDIT">("CREATE");
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "", imageUrl: "" });
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "", unit: "kg", imageUrl: "" });
+
+    // Create Category State
 
     // Create Category State
     const [isCatOpen, setIsCatOpen] = useState(false);
@@ -76,7 +79,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
 
     const handleOpenCreate = () => {
         setMode("CREATE");
-        setNewProduct({ name: "", categoryId: "", price: "", cost: "", stock: "", imageUrl: "" });
+        setNewProduct({ name: "", categoryId: "", price: "", cost: "", stock: "", unit: "kg", imageUrl: "" });
         setIsCreateOpen(true);
     };
 
@@ -89,6 +92,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
             price: p.price.toString(),
             cost: p.cost.toString(),
             stock: p.stock.toString(),
+            unit: p.unit || "kg",
             imageUrl: p.imageUrl || ""
         });
         setIsCreateOpen(true);
@@ -107,6 +111,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 price: parseFloat(newProduct.price) || 0,
                 cost: parseFloat(newProduct.cost) || 0,
                 stock: parseInt(newProduct.stock) || 0,
+                unit: newProduct.unit,
                 imageUrl: newProduct.imageUrl
             });
 
@@ -205,6 +210,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
             price: mp.price.toString(),
             cost: (mp.price * 0.8).toString(), // Assume 20% margin
             stock: "0",
+            unit: mp.unit || "kg",
             imageUrl: mp.imageUrl || ""
         });
         setIsMarketOpen(false);
@@ -302,6 +308,10 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                 <Label className="text-right">Giá Vốn</Label>
                                 <Input type="number" value={newProduct.cost} onChange={e => setNewProduct({ ...newProduct, cost: e.target.value })} className="col-span-3" />
                             </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Đơn vị</Label>
+                                <Input value={newProduct.unit} onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })} className="col-span-3" placeholder="kg, cái, bó..." />
+                            </div>
                             {mode === "CREATE" && (
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label className="text-right">Tồn Đầu</Label>
@@ -334,7 +344,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
                         <CardContent className="p-4 py-2 flex flex-col gap-1 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Giá bán:</span>
-                                <span className="font-medium">{new Intl.NumberFormat('vi-VN').format(product.price)}</span>
+                                <span className="font-medium">{new Intl.NumberFormat('vi-VN').format(product.price)} / {product.unit || 'kg'}</span> {product.unit || 'kg'}
                             </div>
                             <div className="flex justify-between items-center mt-2 pt-2 border-t">
                                 <span className="text-muted-foreground font-medium">Tồn kho:</span>
