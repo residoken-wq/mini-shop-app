@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Product, Customer } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -114,11 +116,11 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
         return sum + (price * item.quantity);
     }, 0);
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (isFullPayment: boolean = false) => {
         if (cart.length === 0) return;
         setIsCheckoutLoading(true);
 
-        const paid = amountPaid ? parseFloat(amountPaid) : cartTotal;
+        const paid = isFullPayment ? cartTotal : (amountPaid ? parseFloat(amountPaid) : 0);
 
         const result = await createOrder({
             customerId: selectedCustomer?.id,
@@ -380,10 +382,25 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                         )}
                     </div>
 
-                    <Button className="w-full" size="lg" disabled={cart.length === 0 || isCheckoutLoading} onClick={handleCheckout}>
-                        {isCheckoutLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Thanh toán
-                    </Button>
+                    <div className="grid grid-cols-3 gap-2 mt-4">
+                        <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => {
+                            if (confirm("Bạn có chắc muốn hủy đơn hàng này?")) {
+                                setCart([]);
+                                setSelectedCustomer(null);
+                                setAmountPaid("");
+                            }
+                        }}>
+                            Hủy
+                        </Button>
+                        <Button variant="secondary" onClick={() => handleCheckout(false)} disabled={cart.length === 0 || isCheckoutLoading}>
+                            {isCheckoutLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Lưu
+                        </Button>
+                        <Button onClick={() => handleCheckout(true)} disabled={cart.length === 0 || isCheckoutLoading}>
+                            {isCheckoutLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Lưu & TT
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>
