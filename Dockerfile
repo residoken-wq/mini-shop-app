@@ -8,10 +8,12 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
+COPY package.json ./
 COPY prisma ./prisma/
+# COPY package-lock.json* ./ 
 
-RUN npm ci
+# Force install to ignore local lockfile mismatches
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
