@@ -142,16 +142,16 @@ export default function CategoriesClient({ initialCategories }: CategoriesPagePr
                         <DialogTitle>{mode === "CREATE" ? "Thêm Danh Mục" : "Sửa Danh Mục"}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Tên</Label>
+                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                            <Label className="text-left md:text-right">Tên</Label>
                             <Input
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 className="col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Mã (Prefix)</Label>
+                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                            <Label className="text-left md:text-right">Mã (Prefix)</Label>
                             <Input
                                 value={formData.code}
                                 onChange={e => setFormData({ ...formData, code: e.target.value })}

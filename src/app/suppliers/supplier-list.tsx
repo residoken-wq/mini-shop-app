@@ -172,24 +172,24 @@ export default function SupplierList({ initialSuppliers }: SupplierListProps) {
                         <DialogTitle>{mode === "CREATE" ? "Thêm NCC" : "Sửa NCC"}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Tên *</Label>
+                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                            <Label className="text-left md:text-right">Tên *</Label>
                             <Input
                                 value={formData.name}
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 className="col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">SĐT</Label>
+                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                            <Label className="text-left md:text-right">SĐT</Label>
                             <Input
                                 value={formData.phone}
                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                 className="col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Địa chỉ</Label>
+                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                            <Label className="text-left md:text-right">Địa chỉ</Label>
                             <Input
                                 value={formData.address}
                                 onChange={e => setFormData({ ...formData, address: e.target.value })}

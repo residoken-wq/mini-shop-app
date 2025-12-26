@@ -256,42 +256,42 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
 
                         {/* PENDING ITEM CARD */}
                         {pendingItem && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-4 items-center animate-in slide-in-from-top-2">
-                                <div className="bg-white p-2 rounded border shrink-0">
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex flex-col sm:flex-row gap-4 items-center animate-in slide-in-from-top-2">
+                                <div className="bg-white p-2 rounded border shrink-0 hidden sm:block">
                                     <span className="text-2xl font-bold text-primary">?</span>
                                 </div>
-                                <div className="flex-1 grid grid-cols-2 gap-2">
+                                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Sản phẩm</p>
-                                        <p className="font-bold text-lg text-primary">{pendingItem.product.name}</p>
+                                        <p className="text-xs text-muted-foreground hidden sm:block">Sản phẩm</p>
+                                        <p className="font-bold text-lg text-primary truncate">{pendingItem.product.name}</p>
                                         <p className="text-xs text-muted-foreground">Kho: {pendingItem.product.stock} {pendingItem.product.unit}</p>
                                     </div>
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center justify-between text-sm">
+                                    <div className="flex flex-row sm:flex-col gap-2 sm:gap-1 justify-between">
+                                        <div className="flex items-center gap-2 sm:justify-between text-sm">
                                             <span>SL:</span>
                                             <input
                                                 type="number"
-                                                className="w-16 border rounded px-1 text-right font-bold"
+                                                className="w-16 border rounded px-1 text-right font-bold h-8"
                                                 value={pendingItem.quantity}
                                                 onChange={(e) => setPendingItem({ ...pendingItem, quantity: parseFloat(e.target.value) || 0 })}
                                             />
                                         </div>
-                                        <div className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2 sm:justify-between text-sm">
                                             <span>Giá:</span>
                                             <input
                                                 type="number"
-                                                className="w-20 border rounded px-1 text-right text-blue-600 font-bold"
+                                                className="w-24 sm:w-20 border rounded px-1 text-right text-blue-600 font-bold h-8"
                                                 value={pendingItem.customPrice || pendingItem.product.price}
                                                 onChange={(e) => setPendingItem({ ...pendingItem, customPrice: parseFloat(e.target.value) || 0 })}
                                             />
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-2 shrink-0">
-                                    <Button size="sm" onClick={() => addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice)}>
+                                <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                                    <Button size="sm" className="flex-1" onClick={() => addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice)}>
                                         Thêm (Tiếp)
                                     </Button>
-                                    <Button size="sm" variant="ghost" className="text-red-500 h-6" onClick={() => setPendingItem(null)}>
+                                    <Button size="sm" variant="ghost" className="text-red-500 h-8 sm:h-6 flex-1 sm:flex-initial" onClick={() => setPendingItem(null)}>
                                         Hủy
                                     </Button>
                                 </div>
@@ -305,7 +305,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto pb-20">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 overflow-y-auto pb-20 p-1">
                         {filteredProducts.map(product => {
                             // Find market price
                             const marketP = marketPrices.find(mp => mp.name.toLowerCase() === product.name.toLowerCase());

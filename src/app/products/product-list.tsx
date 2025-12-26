@@ -256,12 +256,12 @@ export function ProductList({ initialProducts }: ProductListProps) {
                     <DialogContent>
                         <DialogHeader><DialogTitle>Thêm Danh Mục</DialogTitle></DialogHeader>
                         <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Tên</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Tên</Label>
                                 <Input value={newCat.name} onChange={e => setNewCat({ ...newCat, name: e.target.value })} className="col-span-3" placeholder="Ví dụ: Rau Củ" />
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Mã (Prefix)</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Mã (Prefix)</Label>
                                 <Input value={newCat.code} onChange={e => setNewCat({ ...newCat, code: e.target.value })} className="col-span-3" placeholder="Ví dụ: RAU" />
                             </div>
                         </div>
@@ -279,8 +279,8 @@ export function ProductList({ initialProducts }: ProductListProps) {
                     <DialogContent>
                         <DialogHeader><DialogTitle>{mode === "CREATE" ? "Thêm Sản Phẩm Mới" : "Sửa Sản Phẩm"}</DialogTitle></DialogHeader>
                         <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Danh mục</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Danh mục</Label>
                                 <select
                                     className="col-span-3 flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     value={newProduct.categoryId}
@@ -292,33 +292,33 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                     ))}
                                 </select>
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Tên SP</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Tên SP</Label>
                                 <Input value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} className="col-span-3" />
                             </div>
-                            <div className="col-start-2 col-span-3 text-xs text-muted-foreground">
+                            <div className="col-start-1 md:col-start-2 col-span-4 md:col-span-3 text-xs text-muted-foreground">
                                 * Mã SKU sẽ được tạo tự động theo danh mục (VD: RAU-001)
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Giá Bán</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Giá Bán</Label>
                                 <Input type="number" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} className="col-span-3" />
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Giá Vốn</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Giá Vốn</Label>
                                 <Input type="number" value={newProduct.cost} onChange={e => setNewProduct({ ...newProduct, cost: e.target.value })} className="col-span-3" />
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Đơn vị</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Đơn vị</Label>
                                 <Input value={newProduct.unit} onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })} className="col-span-3" placeholder="kg, cái, bó..." />
                             </div>
                             {mode === "CREATE" && (
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label className="text-right">Tồn Đầu</Label>
+                                <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                    <Label className="text-left md:text-right">Tồn Đầu</Label>
                                     <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })} className="col-span-3" />
                                 </div>
                             )}
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Link Ảnh</Label>
+                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                                <Label className="text-left md:text-right">Link Ảnh</Label>
                                 <Input value={newProduct.imageUrl} onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })} className="col-span-3" placeholder="https://..." />
                             </div>
                         </div>
