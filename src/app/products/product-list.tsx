@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-    Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus
+    Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus, RefreshCw, Download
 } from "lucide-react";
-import { createProduct, adjustStock, getInventoryHistory, createCategory, getCategories } from "./actions";
+import { createProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices } from "./actions";
 import { cn } from "@/lib/utils";
+import { MarketProduct } from "@/lib/market-scraper";
 
 // Extend Product to include Category relation if needed, or just use basic type
 type ProductWithCategory = Product & { category?: Category | null };
@@ -321,6 +322,62 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Market Dialog */}
+            <Dialog open={isMarketOpen} onOpenChange={setIsMarketOpen}>
+                <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Giá Chợ Đầu Mối Bình Điền</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto -mx-4 px-4">
+                        {isLoadingMarket ? (
+                            <div className="flex justify-center items-center h-40">
+                                <span className="loading">Đang tải dữ liệu...</span>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {marketProducts.map((mp, i) => {
+                                    // Simple exact match check
+                                    const existing = products.find(p => p.name.toLowerCase() === mp.name.toLowerCase());
+
+                                    return (
+                                        <div key={i} className="flex gap-4 p-3 border rounded-lg items-start">
+                                            {mp.imageUrl && (
+                                                <img src={mp.imageUrl} className="w-16 h-16 object-cover rounded-md" alt={mp.name} />
+                                            )}
+                                            <div className="flex-1">
+                                                <h4 className="font-medium text-sm">{mp.name}</h4>
+                                                <p className="text-xs text-muted-foreground">Mã chợ: {mp.code}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="font-bold text-red-600">
+                                                        {new Intl.NumberFormat('vi-VN').format(mp.price)}đ
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">/{mp.unit || 'kg'}</span>
+                                                </div>
+
+                                                {existing ? (
+                                                    <div className="mt-2 text-xs bg-yellow-50 p-2 rounded text-yellow-800 flex justify-between items-center">
+                                                        <span>Đã có: {new Intl.NumberFormat('vi-VN').format(existing.price)}đ</span>
+                                                        {Math.abs(existing.price - mp.price) > 0 && (
+                                                            <span className={existing.price < mp.price ? "text-red-500" : "text-green-600"}>
+                                                                {existing.price < mp.price ? `Thấp hơn ${(mp.price - existing.price) / 1000}k` : `Cao hơn ${(existing.price - mp.price) / 1000}k`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <Button size="sm" variant="secondary" className="w-full mt-2 h-7 text-xs" onClick={() => handleImportMarket(mp)}>
+                                                        <Download className="w-3 h-3 mr-1" /> Nhập SP
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

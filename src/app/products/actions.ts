@@ -27,6 +27,12 @@ export async function createCategory(name: string, code: string) {
     }
 }
 
+import { scrapeBinhDienMarket } from "@/lib/market-scraper";
+
+export async function getMarketPrices() {
+    return await scrapeBinhDienMarket();
+}
+
 export async function createProduct(data: { name: string; categoryId: string; price: number; cost: number; stock: number; imageUrl?: string }) {
     try {
         // Get Category Code for SKU prefix
