@@ -1,28 +1,36 @@
 # Deployment Guide: Mini Shop App with Nginx Proxy Manager
 
 ## 1. Docker Configuration Check
-Your `docker-compose.yml` is already configured to avoid port conflicts with your existing service.
+Your `docker-compose.yml` is configured to map port 3100 on the host to 3000 in the container.
 - **Service Name:** `mini-shop-app`
 - **Container Port:** `3000` (Internal)
 - **Host Port:** `3100` (External)
 
-This mapping (`3100:3000`) ensures that `mini-shop-app` listens on port **3100** on your VPS, leaving port 3000 free for your other service.
+## 2. Nginx Proxy Manager (NPM) Configuration [CRITICAL]
 
-## 2. Nginx Proxy Manager Setup
+Since NPM is likely running in a separate Docker stack/container, it cannot see `mini-shop-app` by its hostname (`web` or `mini-shop-app`) or `localhost`.
 
-To expose the app via a domain (e.g., `shop.yourdomain.com`), configure a new Proxy Host in Nginx Proxy Manager:
+**You MUST use the VPS Internal IP Address.**
 
-### Details Tab
-- **Domain Names:** `shop.yourdomain.com` (or your chosen domain)
+### Get your Internal IP
+Run this command on your VPS:
+```bash
+hostname -I
+```
+Use the first IP address returned (e.g., `10.128.0.2` or similar). Do NOT use `127.0.0.1`.
+
+### NPM Proxy Host Settings
+
+#### Details Tab
+- **Domain Names:** `shoprau.nemmamnon.com`
 - **Scheme:** `http`
-- **Forward Hostname / IP:** `<YOUR_VPS_IP>` 
-  - *Note: Do not use `localhost` if NPM is in a container. Use the actual Public IP or the Docker Gateway IP (often `172.17.0.1`).*
-- **Forward Port:** `3100`
+- **Forward Hostname / IP:** `<YOUR_VPS_INTERNAL_IP>` (e.g., `10.128.0.2`)
+- **Forward Port:** `3100`  <-- IMPORTANT: Use the external mapped port
 - **Cache Assets:** Enable
 - **Block Common Exploits:** Enable
 - **Websockets Support:** Enable
 
-### SSL Tab
+#### SSL Tab
 - **SSL Certificate:** Request a new Let's Encrypt certificate
 - **Force SSL:** Enable
 - **HTTP/2 Support:** Enable
@@ -34,11 +42,14 @@ Run the following commands on your VPS:
 # 1. Pull latest changes
 git pull
 
-# 2. Rebuild and start container
+# 2. Rebuild and start container (if you haven't already)
 docker-compose up -d --build
 
 # 3. Check logs to ensure it started correctly
 docker logs -f mini-shop-app
 ```
 
-Once the container is running, your app should be accessible at `http://<YOUR_VPS_IP>:3100` and via the domain you configured in NPM.
+**Troubleshooting 504 Gateway Timeout:**
+If you still see 504:
+1.  **Firewall:** Ensure port `3100` is allowed on the VPS firewall (e.g., `ufw allow 3100`).
+2.  **Connectivity:** Test if NPM can reach the app. Enter the NPM container shell (`docker exec -it <npm_container_id> sh`) and try `curl http://<YOUR_VPS_INTERNAL_IP>:3100`. If it fails, check your VPS firewall or network rules.
