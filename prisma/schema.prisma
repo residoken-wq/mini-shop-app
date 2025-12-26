@@ -11,10 +11,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique // e.g., VEG, FRUIT
+  products  Product[]
+}
+
 model Product {
   id        String   @id @default(uuid())
   name      String
-  sku       String   @unique
+  sku       String   @unique // e.g. VEG-001
   price     Float
   cost      Float    @default(0)
   stock     Int      @default(0)
@@ -22,6 +30,9 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
   orderItems OrderItem[]
   inventoryTransactions InventoryTransaction[]
 }
@@ -52,6 +63,7 @@ model Supplier {
 
 model Order {
   id        String   @id @default(uuid())
+  code      String   @unique // e.g. SO-20231225-01
   type      String   // "SALE" or "PURCHASE"
   status    String   // "PENDING", "COMPLETED", "CANCELLED"
   total     Float
