@@ -27,6 +27,42 @@ export async function createCategory(name: string, code: string) {
     }
 }
 
+export async function bulkImportMarketProducts(products: { name: string; price: number; imageUrl?: string }[]) {
+    try {
+        // 1. Ensure Category "Rau Củ" exists
+        let category = await db.category.findFirst({ where: { code: "RAU" } });
+        if (!category) {
+            category = await db.category.create({
+                data: { name: "Rau Củ", code: "RAU" }
+            });
+        }
+
+        let count = 0;
+        for (const p of products) {
+            const existing = await db.product.findFirst({ where: { name: p.name } });
+            if (!existing) {
+                const sku = await generateSku(category.code);
+                await db.product.create({
+                    data: {
+                        name: p.name,
+                        sku: sku,
+                        categoryId: category.id,
+                        price: p.price,
+                        cost: p.price * 0.8,
+                        stock: 0,
+                        imageUrl: p.imageUrl
+                    }
+                });
+                count++;
+            }
+        }
+        revalidatePath("/products");
+        return { success: true, count };
+    } catch (e) {
+        return { success: false, error: "Failed to import" };
+    }
+}
+
 import { scrapeBinhDienMarket } from "@/lib/market-scraper";
 
 export async function getMarketPrices() {

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import {
     Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus, RefreshCw, Download
 } from "lucide-react";
-import { createProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices } from "./actions";
+import { createProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices, bulkImportMarketProducts } from "./actions";
 import { cn } from "@/lib/utils";
 import { MarketProduct } from "@/lib/market-scraper";
 
@@ -150,6 +150,19 @@ export function ProductList({ initialProducts }: ProductListProps) {
         });
         setIsMarketOpen(false);
         setIsCreateOpen(true);
+    };
+
+    const handleBulkImport = async () => {
+        setIsLoadingMarket(true);
+        const res = await bulkImportMarketProducts(marketProducts);
+        if (res.success) {
+            alert(`Đã nhập ${res.count} sản phẩm vào danh mục Rau Củ.`);
+            setIsMarketOpen(false);
+            window.location.reload();
+        } else {
+            alert("Lỗi: " + res.error);
+        }
+        setIsLoadingMarket(false);
     };
 
     return (
@@ -356,11 +369,18 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 </DialogContent>
             </Dialog>
 
+
+
             {/* Market Dialog */}
             <Dialog open={isMarketOpen} onOpenChange={setIsMarketOpen}>
                 <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-                    <DialogHeader>
+                    <DialogHeader className="flex flex-row justify-between items-center pr-8">
                         <DialogTitle>Giá Chợ Đầu Mối Bình Điền</DialogTitle>
+                        {marketProducts.length > 0 && (
+                            <Button onClick={handleBulkImport} size="sm" variant="default">
+                                <Download className="mr-2 h-4 w-4" /> Nhập tất cả ({marketProducts.length})
+                            </Button>
+                        )}
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto -mx-4 px-4">
                         {isLoadingMarket ? (
