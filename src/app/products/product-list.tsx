@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Product, InventoryTransaction } from "@prisma/client";
+import { useState, useMemo, useEffect } from "react";
+import { Product, InventoryTransaction, Category } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -10,22 +10,30 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-    Plus, Search, History, AlertTriangle, CheckCircle, Package, ArrowUpCircle, ArrowDownCircle
+    Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus
 } from "lucide-react";
-import { createProduct, adjustStock, getInventoryHistory } from "./actions";
+import { createProduct, adjustStock, getInventoryHistory, createCategory, getCategories } from "./actions";
 import { cn } from "@/lib/utils";
+
+// Extend Product to include Category relation if needed, or just use basic type
+type ProductWithCategory = Product & { category?: Category | null };
 
 interface ProductListProps {
     initialProducts: Product[];
 }
 
 export function ProductList({ initialProducts }: ProductListProps) {
-    const [products, setProducts] = useState(initialProducts);
+    const [products, setProducts] = useState<ProductWithCategory[]>(initialProducts);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Create State
+    // Create Product State
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [newProduct, setNewProduct] = useState({ name: "", sku: "", price: "", cost: "", stock: "" });
+    const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "" });
+
+    // Create Category State
+    const [isCatOpen, setIsCatOpen] = useState(false);
+    const [newCat, setNewCat] = useState({ name: "", code: "" });
 
     // Adjust State
     const [isAdjustOpen, setIsAdjustOpen] = useState(false);
@@ -39,6 +47,11 @@ export function ProductList({ initialProducts }: ProductListProps) {
     const [historyList, setHistoryList] = useState<InventoryTransaction[]>([]);
     const [historyTarget, setHistoryTarget] = useState<Product | null>(null);
 
+    // Fetch Categories on Load
+    useEffect(() => {
+        getCategories().then(setCategories);
+    }, []);
+
     const filteredProducts = useMemo(() => {
         const lower = searchQuery.toLowerCase();
         return products.filter(p =>
@@ -47,10 +60,26 @@ export function ProductList({ initialProducts }: ProductListProps) {
         );
     }, [products, searchQuery]);
 
-    const handleCreate = async () => {
+    const handleCreateCategory = async () => {
+        const res = await createCategory(newCat.name, newCat.code);
+        if (res.success && res.category) {
+            setCategories(prev => [...prev, res.category!]);
+            setIsCatOpen(false);
+            setNewCat({ name: "", code: "" });
+        } else {
+            alert("Lỗi: " + res.error);
+        }
+    };
+
+    const handleCreateProduct = async () => {
+        if (!newProduct.categoryId) {
+            alert("Vui lòng chọn danh mục");
+            return;
+        }
+
         const res = await createProduct({
             name: newProduct.name,
-            sku: newProduct.sku,
+            categoryId: newProduct.categoryId,
             price: parseFloat(newProduct.price) || 0,
             cost: parseFloat(newProduct.cost) || 0,
             stock: parseInt(newProduct.stock) || 0
@@ -59,7 +88,9 @@ export function ProductList({ initialProducts }: ProductListProps) {
         if (res.success && res.product) {
             setProducts(prev => [res.product!, ...prev]);
             setIsCreateOpen(false);
-            setNewProduct({ name: "", sku: "", price: "", cost: "", stock: "" });
+            setNewProduct({ name: "", categoryId: "", price: "", cost: "", stock: "" });
+        } else {
+            alert("Lỗi: " + res.error);
         }
     };
 
@@ -108,20 +139,57 @@ export function ProductList({ initialProducts }: ProductListProps) {
                         onChange={e => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+
+                {/* Create Category */}
+                <Dialog open={isCatOpen} onOpenChange={setIsCatOpen}>
                     <DialogTrigger asChild>
-                        <Button><Plus className="mr-2 h-4 w-4" /> Thêm Mới</Button>
+                        <Button variant="outline" size="icon"><FolderPlus className="h-4 w-4" /></Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogHeader><DialogTitle>Thêm Sản Phẩm</DialogTitle></DialogHeader>
+                        <DialogHeader><DialogTitle>Thêm Danh Mục</DialogTitle></DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right">Tên</Label>
-                                <Input value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} className="col-span-3" />
+                                <Input value={newCat.name} onChange={e => setNewCat({ ...newCat, name: e.target.value })} className="col-span-3" placeholder="Ví dụ: Rau Củ" />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label className="text-right">Mã (SKU)</Label>
-                                <Input value={newProduct.sku} onChange={e => setNewProduct({ ...newProduct, sku: e.target.value })} className="col-span-3" />
+                                <Label className="text-right">Mã (Prefix)</Label>
+                                <Input value={newCat.code} onChange={e => setNewCat({ ...newCat, code: e.target.value })} className="col-span-3" placeholder="Ví dụ: RAU" />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={handleCreateCategory}>Lưu</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Create Product */}
+                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                    <DialogTrigger asChild>
+                        <Button><Plus className="mr-2 h-4 w-4" /> Thêm SP</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader><DialogTitle>Thêm Sản Phẩm Mới</DialogTitle></DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Danh mục</Label>
+                                <select
+                                    className="col-span-3 flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={newProduct.categoryId}
+                                    onChange={e => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                                >
+                                    <option value="">-- Chọn danh mục --</option>
+                                    {categories.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Tên SP</Label>
+                                <Input value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} className="col-span-3" />
+                            </div>
+                            <div className="col-start-2 col-span-3 text-xs text-muted-foreground">
+                                * Mã SKU sẽ được tạo tự động theo danh mục (VD: RAU-001)
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right">Giá Bán</Label>
@@ -137,7 +205,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button onClick={handleCreate}>Lưu</Button>
+                            <Button onClick={handleCreateProduct}>Lưu</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -159,10 +227,6 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                 <span className="text-muted-foreground">Giá bán:</span>
                                 <span className="font-medium">{new Intl.NumberFormat('vi-VN').format(product.price)}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Giá vốn:</span>
-                                <span className="">{new Intl.NumberFormat('vi-VN').format(product.cost)}</span>
-                            </div>
                             <div className="flex justify-between items-center mt-2 pt-2 border-t">
                                 <span className="text-muted-foreground font-medium">Tồn kho:</span>
                                 <span className={cn("text-lg font-bold", product.stock <= 0 ? "text-red-600" : "text-primary")}>
@@ -182,7 +246,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 ))}
             </div>
 
-            {/* Adjust Logic Dialog */}
+            {/* Adjust & History Dialogs (Same as before) */}
             <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -226,7 +290,6 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 </DialogContent>
             </Dialog>
 
-            {/* History Dialog */}
             <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
                 <DialogContent className="max-w-xl max-h-[80vh] flex flex-col">
                     <DialogHeader>
@@ -257,7 +320,6 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                     </span>
                                 </div>
                             ))}
-                            {historyList.length === 0 && <p className="text-center text-muted-foreground">Chưa có lịch sử</p>}
                         </div>
                     </div>
                 </DialogContent>
