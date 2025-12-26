@@ -32,7 +32,6 @@ export function ProductList({ initialProducts }: ProductListProps) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [mode, setMode] = useState<"CREATE" | "EDIT">("CREATE");
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "", unit: "kg", imageUrl: "" });
 
     // Create Category State
