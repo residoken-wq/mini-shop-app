@@ -1,12 +1,8 @@
 import * as cheerio from 'cheerio';
+import { MarketProduct } from './market-types';
 
-export interface MarketProduct {
-    name: string;
-    code: string;
-    price: number;
-    imageUrl?: string;
-    unit?: string;
-}
+// Re-export type for backwards compatibility
+export type { MarketProduct } from './market-types';
 
 export async function scrapeBinhDienMarket(): Promise<MarketProduct[]> {
     try {

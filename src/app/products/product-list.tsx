@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { createProduct, updateProduct, deleteProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices, bulkImportMarketProducts } from "./actions";
 import { cn } from "@/lib/utils";
-import { MarketProduct } from "@/lib/market-scraper";
+import { MarketProduct } from "@/lib/market-types";
 
 // Extend Product to include Category relation if needed, or just use basic type
 type ProductWithCategory = Product & { category?: Category | null };

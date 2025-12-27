@@ -63,9 +63,9 @@ export async function bulkImportMarketProducts(products: { name: string; price: 
     }
 }
 
-import { scrapeBinhDienMarket } from "@/lib/market-scraper";
-
 export async function getMarketPrices() {
+    // Dynamic import to avoid SSR issues with cheerio
+    const { scrapeBinhDienMarket } = await import("@/lib/market-scraper");
     return await scrapeBinhDienMarket();
 }
 
