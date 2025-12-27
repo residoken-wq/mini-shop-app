@@ -211,8 +211,102 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
     // Mobile Tab State
     const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
 
+    // NEW: Step 1 - Customer Selection Screen
+    if (!selectedCustomer && !isWalkIn) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] gap-6 p-4 animate-in fade-in max-w-md mx-auto">
+                <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-bold tracking-tight">Tạo Đơn Hàng Mới</h2>
+                    <p className="text-muted-foreground">Vui lòng chọn khách hàng để bắt đầu</p>
+                </div>
+
+                <div className="w-full space-y-4 bg-card p-6 rounded-xl border shadow-sm">
+                    <div className="space-y-2">
+                        <Label>Tìm khách hàng có sẵn</Label>
+                        <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Nhập tên hoặc số điện thoại..."
+                                value={customerSearch}
+                                onChange={(e) => setCustomerSearch(e.target.value)}
+                                className="pl-8"
+                                autoFocus
+                            />
+                        </div>
+                        {/* Suggestions */}
+                        {customerSearch && (
+                            <div className="border rounded-md divide-y max-h-[200px] overflow-auto bg-popover">
+                                {filteredCustomers.length > 0 ? filteredCustomers.map(c => (
+                                    <div
+                                        key={c.id}
+                                        className="p-3 hover:bg-accent cursor-pointer flex justify-between items-center"
+                                        onClick={() => { setSelectedCustomer(c); setCustomerSearch(""); }}
+                                    >
+                                        <span className="font-medium">{c.name}</span>
+                                        <span className="text-xs text-muted-foreground">{c.phone}</span>
+                                    </div>
+                                )) : (
+                                    <div className="p-3 text-sm text-center text-muted-foreground">Không tìm thấy khách hàng</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                        <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Hoặc</span></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => setIsWalkIn(true)}>
+                            <UserPlus className="h-6 w-6 text-blue-600" />
+                            <span>Khách lẻ (Tự do)</span>
+                        </Button>
+
+                        <Dialog open={newCustomerOpen} onOpenChange={setNewCustomerOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="h-20 flex-col gap-2">
+                                    <Plus className="h-6 w-6 text-green-600" />
+                                    <span>Tạo khách mới</span>
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Thêm khách hàng mới</DialogTitle>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="name" className="text-right">Tên *</Label>
+                                        <Input id="name" value={newCustomerName} onChange={e => setNewCustomerName(e.target.value)} className="col-span-3" />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="phone" className="text-right">SĐT</Label>
+                                        <Input id="phone" value={newCustomerPhone} onChange={e => setNewCustomerPhone(e.target.value)} className="col-span-3" />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button onClick={handleCreateCustomer}>Lưu khách hàng</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] gap-4">
+            {/* NEW: Global Voice/Search Input (Always Visible) */}
+            <div className="flex gap-2 shrink-0">
+                <VoiceInput
+                    placeholder="Nói tên SP + số lượng (VD: Cà chua 5 ký)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onTranscript={handleVoiceCommand}
+                    className="flex-1"
+                />
+            </div>
+
             {/* Mobile Tab Switcher */}
             <div className="grid grid-cols-2 gap-2 lg:hidden shrink-0">
                 <Button
@@ -244,15 +338,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                     mobileTab === "cart" ? "hidden lg:flex" : "flex"
                 )}>
                     <div className="flex gap-2 shrink-0 flex-col">
-                        <div className="flex gap-2">
-                            <VoiceInput
-                                placeholder="Nói tên SP + số lượng (VD: Cà chua 5 ký)..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                onTranscript={handleVoiceCommand}
-                                className="flex-1"
-                            />
-                        </div>
+                        {/* VoiceInput moved to top level */}
 
                         {/* PENDING ITEM CARD */}
                         {pendingItem && (
@@ -348,69 +434,31 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                     "w-full lg:w-[400px] flex flex-col gap-4 bg-card border rounded-lg shadow-sm h-full overflow-hidden",
                     mobileTab === "products" ? "hidden lg:flex" : "flex"
                 )}>
-                    {/* Customer Selection */}
-                    <div className="p-4 border-b space-y-2 shrink-0">
-                        {!selectedCustomer && !isWalkIn ? (
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="Tìm khách hàng..."
-                                    value={customerSearch}
-                                    onChange={(e) => setCustomerSearch(e.target.value)}
-                                    className="flex-1"
-                                />
-                                <Button variant="secondary" onClick={() => setIsWalkIn(true)}>
-                                    Khách lẻ
-                                </Button>
-                                <Dialog open={newCustomerOpen} onOpenChange={setNewCustomerOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button size="icon" variant="outline"><UserPlus className="h-4 w-4" /></Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Thêm khách hàng mới</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="name" className="text-right">Tên</Label>
-                                                <Input id="name" value={newCustomerName} onChange={e => setNewCustomerName(e.target.value)} className="col-span-3" />
-                                            </div>
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="phone" className="text-right">SĐT</Label>
-                                                <Input id="phone" value={newCustomerPhone} onChange={e => setNewCustomerPhone(e.target.value)} className="col-span-3" />
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <Button onClick={handleCreateCustomer}>Lưu khách hàng</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-                            </div>
-                        ) : (
-                            <div className="flex justify-between items-center bg-secondary/50 p-2 rounded-md">
-                                <div>
-                                    <p className="font-medium">{isWalkIn ? "Khách lẻ (Vãng lai)" : selectedCustomer?.name}</p>
-                                    <p className="text-xs text-muted-foreground">{isWalkIn ? "Không lưu nợ" : selectedCustomer?.phone}</p>
+                    {/* Current Customer Display (Step 2) */}
+                    <div className="p-4 border-b shrink-0 bg-secondary/20">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                    <UserPlus className="h-4 w-4" />
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => { setSelectedCustomer(null); setIsWalkIn(false); }}>x</Button>
+                                <div className="min-w-0">
+                                    <p className="font-bold truncate text-sm">
+                                        {isWalkIn ? "Khách lẻ (Vãng lai)" : selectedCustomer?.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {isWalkIn ? "Không lưu nợ" : selectedCustomer?.phone || "Không có SĐT"}
+                                    </p>
+                                </div>
                             </div>
-                        )}
-
-                        {/* Customer Dropdown Suggestions */}
-                        {!selectedCustomer && !isWalkIn && customerSearch && (
-                            <div className="absolute z-10 w-[calc(100%-2rem)] max-w-[368px] mt-10 bg-popover border rounded-md shadow-md max-h-[200px] overflow-auto">
-                                {filteredCustomers.length > 0 ? filteredCustomers.map(c => (
-                                    <div
-                                        key={c.id}
-                                        className="p-2 hover:bg-accent cursor-pointer text-sm"
-                                        onClick={() => { setSelectedCustomer(c); setCustomerSearch(""); }}
-                                    >
-                                        {c.name} {c.phone && `(${c.phone})`}
-                                    </div>
-                                )) : (
-                                    <div className="p-2 text-sm text-muted-foreground">Không tìm thấy khách hàng</div>
-                                )}
-                            </div>
-                        )}
+                            <Button variant="ghost" size="sm" className="text-xs h-7 text-muted-foreground hover:text-foreground" onClick={() => {
+                                if (cart.length > 0 && !confirm("Thay đổi khách hàng sẽ xóa giỏ hàng hiện tại. Tiếp tục?")) return;
+                                setSelectedCustomer(null);
+                                setIsWalkIn(false);
+                                setCart([]);
+                            }}>
+                                Đổi khách
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Cart Items */}
