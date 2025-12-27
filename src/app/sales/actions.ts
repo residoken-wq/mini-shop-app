@@ -93,6 +93,7 @@ export async function createOrder(data: {
         revalidatePath("/sales");
         revalidatePath("/");
         revalidatePath("/products");
+        revalidatePath("/orders");
 
         return { success: true, orderId: result.id };
     } catch (error) {
