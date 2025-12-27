@@ -186,18 +186,75 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
 
         if (matchedProduct) {
             // Remove product name from string to parse numbers
-            const remaining = lowerTranscript.replace(matchedProduct.name.toLowerCase(), "").trim();
+            // Replace "k" with "000" for easier parsing of "5k" "20k"
+            // Remove "." and "," to handle "20.000" or "20,000" correctly as raw numbers if they are separators
+            // BUT: We need to be careful about decimal quantities like "0.5 kg" vs "20.000 d"
 
-            const numbers = remaining.match(/\d+(\.\d+)?/g);
+            // Strategy: 
+            // 1. Sanitize text: "20k" -> "20000", " nửa " -> " 0.5 "
+            let remaining = lowerTranscript.replace(matchedProduct.name.toLowerCase(), "").trim();
+            remaining = remaining.replace(/\s+/g, ' '); // Normalize spaces
+            remaining = remaining.replace(/(\d+)\s*k\b/g, "$1000"); // "20k" -> "20000"
+            remaining = remaining.replace(/\bnửa\b/g, "0.5"); // "nửa" -> "0.5"
+
+            // 2. Extract numbers. We look for patterns.
+            // Case A: "0.5" (decimal)
+            // Case B: "20.000" (thousands separator)
+            // Case C: "20000" (plain)
+
+            // In Vietnamese context for this app:
+            // "0.5" or "0,5" usually Quantity.
+            // "20.000" or "20,000" usually Price.
+
+            // Let's split by space and process tokens to find numbers
+            const tokens = remaining.split(' ');
+            const foundNumbers: number[] = [];
+
+            for (const token of tokens) {
+                // Remove non-numeric chars except dot and comma
+                const cleanToken = token.replace(/[^\d.,]/g, "");
+                if (!cleanToken) continue;
+
+                // Check for "thousands" format (e.g., 20.000 or 20,000 where it results in a large number)
+                // If token has "." or "," and length > 3, it might be a price
+                if (cleanToken.includes(".") || cleanToken.includes(",")) {
+                    // Try parsing as standard float (US) -> 20.000 = 20
+                    // Try parsing as VI -> 20.000 = 20000
+
+                    // Specific heuristic: If three digits follow a dot/comma, treat as thousands separator?
+                    // "20.000" -> 20000
+                    // "0.5" -> 0.5
+
+                    if (/^\d{1,3}[.,]\d{3}$/.test(cleanToken)) {
+                        // Likely 20.000 -> 20000
+                        foundNumbers.push(parseFloat(cleanToken.replace(/[.,]/g, "")));
+                    } else {
+                        // Likely 0.5 or 1.5 -> Standard float (replace comma with dot for JS)
+                        foundNumbers.push(parseFloat(cleanToken.replace(",", ".")));
+                    }
+                } else {
+                    // Plain integer
+                    foundNumbers.push(parseFloat(cleanToken));
+                }
+            }
+
             let quantity = 1;
             let price = undefined;
 
-            if (numbers && numbers.length > 0) {
-                quantity = parseFloat(numbers[0]);
-                if (numbers.length > 1) {
-                    // Logic: If user says "5 ký 20 nghìn", assume 2nd number is price
-                    let rawPrice = parseFloat(numbers[1]);
+            if (foundNumbers.length > 0) {
+                quantity = foundNumbers[0];
+
+                // Heuristic: If Quantity is super huge (>1000), maybe they said Price first? 
+                // Unlikely given usage "Cà chua 5kg 20k". 
+                // But if they say "Cà chua 20k 5kg" -> logic fails. 
+                // Let's stick to Order: Qty then Price.
+
+                if (foundNumbers.length > 1) {
+                    let rawPrice = foundNumbers[1];
+
+                    // Auto-correct "short" prices: "20" -> "20000"
                     if (rawPrice < 1000) rawPrice *= 1000;
+
                     price = rawPrice;
                 }
             }
@@ -300,14 +357,66 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] gap-4">
             {/* NEW: Global Voice/Search Input (Always Visible) */}
-            <div className="flex gap-2 shrink-0">
-                <VoiceInput
-                    placeholder="Nói tên SP + số lượng (VD: Cà chua 5 ký)..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onTranscript={handleVoiceCommand}
-                    className="flex-1"
-                />
+            <div className="flex gap-2 shrink-0 flex-col">
+                <div className="flex gap-2">
+                    <VoiceInput
+                        placeholder="Nói tên SP + số lượng (VD: Cà chua 5 ký)..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onTranscript={handleVoiceCommand}
+                        className="flex-1"
+                    />
+                </div>
+
+                {/* PENDING ITEM CARD (Global Scope) */}
+                {pendingItem && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex flex-col sm:flex-row gap-4 items-center animate-in slide-in-from-top-2">
+                        <div className="bg-white p-2 rounded border shrink-0 hidden sm:block">
+                            <span className="text-2xl font-bold text-primary">?</span>
+                        </div>
+                        <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <p className="text-xs text-muted-foreground hidden sm:block">Sản phẩm</p>
+                                <p className="font-bold text-lg text-primary truncate">{pendingItem.product.name}</p>
+                                <p className="text-xs text-muted-foreground">Kho: {pendingItem.product.stock} {pendingItem.product.unit}</p>
+                            </div>
+                            <div className="flex flex-row sm:flex-col gap-2 sm:gap-1 justify-between">
+                                <div className="flex items-center gap-2 sm:justify-between text-sm">
+                                    <span>SL:</span>
+                                    <input
+                                        type="number"
+                                        className="w-16 border rounded px-1 text-right font-bold h-8"
+                                        value={pendingItem.quantity}
+                                        onChange={(e) => setPendingItem({ ...pendingItem, quantity: parseFloat(e.target.value) || 0 })}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 sm:justify-between text-sm">
+                                    <span>Giá:</span>
+                                    <input
+                                        type="number"
+                                        className="w-24 sm:w-20 border rounded px-1 text-right text-blue-600 font-bold h-8"
+                                        value={pendingItem.customPrice || pendingItem.product.price}
+                                        onChange={(e) => setPendingItem({ ...pendingItem, customPrice: parseFloat(e.target.value) || 0 })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                            <Button size="sm" className="flex-1" onClick={() => addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice)}>
+                                Thêm (Tiếp)
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-red-500 h-8 sm:h-6 flex-1 sm:flex-initial" onClick={() => setPendingItem(null)}>
+                                Hủy
+                            </Button>
+                        </div>
+                    </div>
+                )}
+                {/* Market Hint for Pending Item */}
+                {pendingItem && marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase()) && (
+                    <div className="text-xs text-muted-foreground flex justify-between px-2">
+                        <span>Giá chợ tham khảo: <span className="font-bold text-orange-600">{new Intl.NumberFormat('vi-VN').format(marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase())!.price)}</span></span>
+                    </div>
+                )}
             </div>
 
             {/* Mobile Tab Switcher */}
@@ -342,56 +451,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                 )}>
                     <div className="flex gap-2 shrink-0 flex-col">
                         {/* VoiceInput moved to top level */}
-
-                        {/* PENDING ITEM CARD */}
-                        {pendingItem && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex flex-col sm:flex-row gap-4 items-center animate-in slide-in-from-top-2">
-                                <div className="bg-white p-2 rounded border shrink-0 hidden sm:block">
-                                    <span className="text-2xl font-bold text-primary">?</span>
-                                </div>
-                                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground hidden sm:block">Sản phẩm</p>
-                                        <p className="font-bold text-lg text-primary truncate">{pendingItem.product.name}</p>
-                                        <p className="text-xs text-muted-foreground">Kho: {pendingItem.product.stock} {pendingItem.product.unit}</p>
-                                    </div>
-                                    <div className="flex flex-row sm:flex-col gap-2 sm:gap-1 justify-between">
-                                        <div className="flex items-center gap-2 sm:justify-between text-sm">
-                                            <span>SL:</span>
-                                            <input
-                                                type="number"
-                                                className="w-16 border rounded px-1 text-right font-bold h-8"
-                                                value={pendingItem.quantity}
-                                                onChange={(e) => setPendingItem({ ...pendingItem, quantity: parseFloat(e.target.value) || 0 })}
-                                            />
-                                        </div>
-                                        <div className="flex items-center gap-2 sm:justify-between text-sm">
-                                            <span>Giá:</span>
-                                            <input
-                                                type="number"
-                                                className="w-24 sm:w-20 border rounded px-1 text-right text-blue-600 font-bold h-8"
-                                                value={pendingItem.customPrice || pendingItem.product.price}
-                                                onChange={(e) => setPendingItem({ ...pendingItem, customPrice: parseFloat(e.target.value) || 0 })}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                                    <Button size="sm" className="flex-1" onClick={() => addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice)}>
-                                        Thêm (Tiếp)
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="text-red-500 h-8 sm:h-6 flex-1 sm:flex-initial" onClick={() => setPendingItem(null)}>
-                                        Hủy
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                        {/* Market Hint for Pending Item */}
-                        {pendingItem && marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase()) && (
-                            <div className="text-xs text-muted-foreground flex justify-between px-2">
-                                <span>Giá chợ tham khảo: <span className="font-bold text-orange-600">{new Intl.NumberFormat('vi-VN').format(marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase())!.price)}</span></span>
-                            </div>
-                        )}
+                        {/* PENDING ITEM MOVED TO TOP LEVEL */}
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 overflow-y-auto pb-20 p-1">
@@ -507,12 +567,15 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                                                 </TableCell>
                                                 <TableCell className="p-1 align-top text-right">
                                                     <Input
-                                                        type="number"
+                                                        type="text"
                                                         className="w-full h-8 px-1 text-right"
-                                                        value={activePrice}
+                                                        value={new Intl.NumberFormat('vi-VN').format(activePrice)}
                                                         onChange={(e) => {
-                                                            const val = parseFloat(e.target.value);
-                                                            setCart(prev => prev.map(i => i.product.id === item.product.id ? { ...i, customPrice: isNaN(val) ? 0 : val } : i));
+                                                            // Remove non-digits
+                                                            const raw = e.target.value.replace(/\D/g, "");
+                                                            const val = raw ? parseFloat(raw) : 0;
+
+                                                            setCart(prev => prev.map(i => i.product.id === item.product.id ? { ...i, customPrice: val } : i));
                                                         }}
                                                         onFocus={(e) => e.target.select()}
                                                     />
