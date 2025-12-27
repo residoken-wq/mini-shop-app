@@ -114,3 +114,12 @@ model InventoryTransaction {
   date      DateTime @default(now())
   note      String?
 }
+
+model ShopSettings {
+  id          String   @id @default("shop")
+  name        String   @default("Mini Shop")
+  phone       String   @default("")
+  address     String   @default("")
+  email       String   @default("")
+  updatedAt   DateTime @updatedAt
+}
