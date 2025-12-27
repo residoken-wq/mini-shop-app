@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Order, Customer, Supplier, OrderItem, Product } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Eye, Trash2, Package, ShoppingCart, Truck } from "lucide-react";
+import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteOrder } from "./actions";
+import { OrderReceipt } from "./order-receipt";
+import html2canvas from "html2canvas";
 
 type OrderWithRelations = Order & {
     customer: Customer | null;
@@ -27,6 +29,29 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterType, setFilterType] = useState<"ALL" | "SALE" | "PURCHASE">("ALL");
     const [selectedOrder, setSelectedOrder] = useState<OrderWithRelations | null>(null);
+    const [isPrinting, setIsPrinting] = useState(false);
+    const receiptRef = useRef<HTMLDivElement>(null);
+
+    const handlePrintOrder = async () => {
+        if (!receiptRef.current || !selectedOrder) return;
+        setIsPrinting(true);
+        try {
+            const canvas = await html2canvas(receiptRef.current, {
+                scale: 2,
+                backgroundColor: "#ffffff",
+                useCORS: true,
+            });
+            const link = document.createElement("a");
+            link.download = `HoaDon_${selectedOrder.code}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        } catch (error) {
+            console.error("Failed to generate image:", error);
+            alert("Lỗi khi tạo hình ảnh đơn hàng");
+        } finally {
+            setIsPrinting(false);
+        }
+    };
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch = order.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -199,61 +224,35 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
 
             {/* Order Detail Dialog */}
             <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Chi tiết đơn hàng #{selectedOrder?.code}</DialogTitle>
+                <DialogContent className="max-w-md md:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader className="shrink-0">
+                        <DialogTitle className="flex items-center justify-between pr-8">
+                            <span>Chi tiết đơn hàng #{selectedOrder?.code}</span>
+                        </DialogTitle>
                     </DialogHeader>
                     {selectedOrder && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <p className="text-muted-foreground">Loại</p>
-                                    <p className="font-medium">{selectedOrder.type === "SALE" ? "Bán hàng" : "Mua hàng"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">Trạng thái</p>
-                                    <p>{getStatusBadge(selectedOrder.status)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">{selectedOrder.type === "SALE" ? "Khách hàng" : "Nhà cung cấp"}</p>
-                                    <p className="font-medium">
-                                        {selectedOrder.type === "SALE"
-                                            ? (selectedOrder.customer?.name || "Khách lẻ")
-                                            : (selectedOrder.supplier?.name || "-")}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">Ngày tạo</p>
-                                    <p className="font-medium">{new Date(selectedOrder.createdAt).toLocaleString('vi-VN')}</p>
-                                </div>
-                            </div>
-
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Sản phẩm</TableHead>
-                                        <TableHead className="text-center">SL</TableHead>
-                                        <TableHead className="text-right">Đơn giá</TableHead>
-                                        <TableHead className="text-right">Thành tiền</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {selectedOrder.items.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>{item.product.name}</TableCell>
-                                            <TableCell className="text-center">{item.quantity}</TableCell>
-                                            <TableCell className="text-right">{new Intl.NumberFormat('vi-VN').format(item.price)}</TableCell>
-                                            <TableCell className="text-right font-medium">{new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-
-                            <div className="flex justify-end text-lg font-bold">
-                                <span>Tổng: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedOrder.total)}</span>
+                        <div className="flex-1 overflow-y-auto">
+                            {/* Print Receipt Preview */}
+                            <div className="border rounded-lg overflow-hidden shadow-sm">
+                                <OrderReceipt ref={receiptRef} order={selectedOrder} />
                             </div>
                         </div>
                     )}
+                    {/* Print Button Fixed at Bottom */}
+                    <div className="shrink-0 pt-4 border-t">
+                        <Button
+                            onClick={handlePrintOrder}
+                            disabled={isPrinting}
+                            className="w-full h-12 text-lg"
+                        >
+                            {isPrinting ? (
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            ) : (
+                                <Download className="mr-2 h-5 w-5" />
+                            )}
+                            {isPrinting ? "Đang tạo hình ảnh..." : "Tải hình ảnh hóa đơn"}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
