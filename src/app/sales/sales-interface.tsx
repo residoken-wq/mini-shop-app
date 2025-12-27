@@ -354,16 +354,38 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
             </div>
         );
     }
+    // Focus Management
+    const searchInputRef = useCallback((node: HTMLInputElement | null) => {
+        if (node) {
+            node.focus();
+        }
+    }, []); // Auto-focus on mount/render if provided
+
+    // Ensure focus returns to search after adding
+    useEffect(() => {
+        if (!pendingItem && !newCustomerOpen && !selectedCustomer) {
+            // Maybe focus logic custom
+        }
+    }, [pendingItem, newCustomerOpen, selectedCustomer]);
+
+    // NEW: Function to handle Enter key in Pending Inputs
+    const handlePendingKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && pendingItem) {
+            addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice);
+        }
+    };
+
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] gap-4">
             {/* NEW: Global Voice/Search Input (Always Visible) */}
             <div className="flex gap-2 shrink-0 flex-col">
                 <div className="flex gap-2">
                     <VoiceInput
-                        placeholder="Nói tên SP + số lượng (VD: Cà chua 5 ký)..."
+                        ref={searchInputRef}
+                        placeholder="Nhập tên sản phẩm để tìm..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onTranscript={handleVoiceCommand}
+                        onTranscript={(val) => { setSearchQuery(val); }}
                         className="flex-1"
                     />
                 </div>
@@ -388,6 +410,8 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                                         className="w-16 border rounded px-1 text-right font-bold h-8"
                                         value={pendingItem.quantity}
                                         onChange={(e) => setPendingItem({ ...pendingItem, quantity: parseFloat(e.target.value) || 0 })}
+                                        onKeyDown={handlePendingKeyDown}
+                                        autoFocus
                                     />
                                 </div>
                                 <div className="flex items-center gap-2 sm:justify-between text-sm">
@@ -397,6 +421,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                                         className="w-24 sm:w-20 border rounded px-1 text-right text-blue-600 font-bold h-8"
                                         value={pendingItem.customPrice || pendingItem.product.price}
                                         onChange={(e) => setPendingItem({ ...pendingItem, customPrice: parseFloat(e.target.value) || 0 })}
+                                        onKeyDown={handlePendingKeyDown}
                                     />
                                 </div>
                             </div>
@@ -612,7 +637,6 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                             <Label>Khách thanh toán:</Label>
                             <div className="flex gap-2">
                                 <VoiceInput
-                                    type="number"
                                     placeholder="Nhập số tiền..."
                                     value={amountPaid}
                                     onChange={(e) => setAmountPaid(e.target.value)}

@@ -1,51 +1,86 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 import { Mic, MicOff } from "lucide-react";
-import { useVoice } from "@/hooks/use-voice";
-import { useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
-interface VoiceInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-    onTranscript?: (value: string) => void;
+interface VoiceInputProps {
+    onTranscript: (text: string) => void;
+    placeholder?: string;
+    className?: string;
+    value?: string;
+    onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function VoiceInput({ className, onTranscript, value, onChange, ...props }: VoiceInputProps) {
-    const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoice();
+export const VoiceInput = forwardRef<HTMLInputElement, VoiceInputProps>(({
+    onTranscript,
+    placeholder = "Nhập hoặc nói...",
+    className,
+    value,
+    onChange
+}, ref) => {
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
 
     useEffect(() => {
-        if (transcript && onTranscript) {
-            onTranscript(transcript);
-        }
-    }, [transcript, onTranscript]);
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = false;
+            recognitionRef.current.interimResults = false;
+            recognitionRef.current.lang = 'vi-VN';
 
-    const toggle = () => {
+            recognitionRef.current.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript;
+                onTranscript(transcript);
+                setIsListening(false);
+            };
+
+            recognitionRef.current.onerror = (event: any) => {
+                console.error("Speech recognition error", event.error);
+                setIsListening(false);
+            };
+
+            recognitionRef.current.onend = () => {
+                setIsListening(false);
+            };
+        }
+    }, [onTranscript]);
+
+    const toggleListening = () => {
         if (isListening) {
-            stopListening();
+            recognitionRef.current?.stop();
         } else {
-            resetTranscript();
-            startListening();
+            recognitionRef.current?.start();
+            setIsListening(true);
         }
     };
 
     return (
-        <div className="relative flex items-center w-full">
+        <div className={cn("relative flex items-center", className)}>
             <Input
-                className={cn("pr-10", className)}
+                ref={ref}
+                type="text"
+                placeholder={placeholder}
                 value={value}
                 onChange={onChange}
-                {...props}
+                className="pr-10"
             />
             <Button
-                type="button"
                 variant="ghost"
                 size="icon"
-                className={cn("absolute right-0 h-full px-3 text-muted-foreground hover:text-primary", isListening && "text-red-500 animate-pulse")}
-                onClick={toggle}
+                className={cn(
+                    "absolute right-1 hover:bg-transparent",
+                    isListening ? "text-red-500 animate-pulse" : "text-muted-foreground"
+                )}
+                onClick={toggleListening}
             >
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </Button>
         </div>
     );
-}
+});
+
+VoiceInput.displayName = "VoiceInput";

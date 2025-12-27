@@ -288,7 +288,6 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
                         <Label>Trả trước:</Label>
                         <div className="flex gap-2">
                             <VoiceInput
-                                type="number"
                                 placeholder="Nhập số tiền..."
                                 value={amountPaid}
                                 onChange={(e) => setAmountPaid(e.target.value)}
