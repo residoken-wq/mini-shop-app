@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Category } from "@prisma/client";
+import { Category, Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
@@ -11,8 +12,8 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Plus, Search } from "lucide-react";
-import { createCategory, updateCategory, deleteCategory } from "./actions";
+import { Edit, Trash2, Plus, Search, ChevronRight, Package, ArrowLeft } from "lucide-react";
+import { createCategory, updateCategory, deleteCategory, getProductsByCategory } from "./actions";
 
 interface CategoriesPageProps {
     initialCategories: (Category & { _count: { products: number } })[];
@@ -27,6 +28,11 @@ export default function CategoriesClient({ initialCategories }: CategoriesPagePr
     const [mode, setMode] = useState<"CREATE" | "EDIT">("CREATE");
     const [selectedCat, setSelectedCat] = useState<Category | null>(null);
     const [formData, setFormData] = useState({ name: "", code: "" });
+
+    // Product list view
+    const [viewingCategory, setViewingCategory] = useState<(Category & { _count: { products: number } }) | null>(null);
+    const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
 
     const filtered = categories.filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -82,6 +88,76 @@ export default function CategoriesClient({ initialCategories }: CategoriesPagePr
         }
     };
 
+    const handleViewProducts = async (cat: Category & { _count: { products: number } }) => {
+        setViewingCategory(cat);
+        setLoadingProducts(true);
+        const products = await getProductsByCategory(cat.id);
+        setCategoryProducts(products);
+        setLoadingProducts(false);
+    };
+
+    const handleBackToList = () => {
+        setViewingCategory(null);
+        setCategoryProducts([]);
+    };
+
+    // If viewing a category's products
+    if (viewingCategory) {
+        return (
+            <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={handleBackToList}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold">{viewingCategory.name}</h1>
+                        <p className="text-sm text-muted-foreground">
+                            Mã: {viewingCategory.code} • {viewingCategory._count.products} sản phẩm
+                        </p>
+                    </div>
+                </div>
+
+                {loadingProducts ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                ) : categoryProducts.length === 0 ? (
+                    <Card>
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                            <Package className="h-12 w-12 mb-4 opacity-50" />
+                            <p>Danh mục này chưa có sản phẩm</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {categoryProducts.map(product => (
+                            <Card key={product.id}>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-base">{product.name}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-sm space-y-1">
+                                    <p className="text-muted-foreground">SKU: {product.sku}</p>
+                                    <div className="flex justify-between">
+                                        <span>Giá bán:</span>
+                                        <span className="font-medium">
+                                            {new Intl.NumberFormat('vi-VN').format(product.price)} ₫/{product.unit}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Tồn kho:</span>
+                                        <span className={product.stock <= 5 ? "text-red-500 font-bold" : "font-medium"}>
+                                            {product.stock}
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -100,40 +176,35 @@ export default function CategoriesClient({ initialCategories }: CategoriesPagePr
                 />
             </div>
 
-            <div className="border rounded-md">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Mã (Prefix)</TableHead>
-                            <TableHead>Tên Danh Mục</TableHead>
-                            <TableHead>Số lượng SP</TableHead>
-                            <TableHead className="text-right">Thao tác</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filtered.length > 0 ? filtered.map(cat => (
-                            <TableRow key={cat.id}>
-                                <TableCell className="font-mono">{cat.code}</TableCell>
-                                <TableCell className="font-medium">{cat.name}</TableCell>
-                                <TableCell>{cat._count.products}</TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(cat)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(cat.id, cat._count.products)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        )) : (
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
-                                    Chưa có dữ liệu
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filtered.length > 0 ? filtered.map(cat => (
+                    <Card key={cat.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleViewProducts(cat)}>
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg">{cat.name}</CardTitle>
+                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground font-mono">{cat.code}</span>
+                                <span className="font-medium">{cat._count.products} sản phẩm</span>
+                            </div>
+                            <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                                <Button variant="outline" size="sm" onClick={() => handleOpenEdit(cat)}>
+                                    <Edit className="h-4 w-4 mr-1" /> Sửa
+                                </Button>
+                                <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDelete(cat.id, cat._count.products)}>
+                                    <Trash2 className="h-4 w-4 mr-1" /> Xóa
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )) : (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                        Chưa có danh mục nào
+                    </div>
+                )}
             </div>
 
             <Dialog open={isOpen} onOpenChange={setIsOpen}>

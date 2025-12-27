@@ -65,3 +65,10 @@ export async function deleteCategory(id: string) {
         return { success: false, error: "Failed to delete category" };
     }
 }
+
+export async function getProductsByCategory(categoryId: string) {
+    return await db.product.findMany({
+        where: { categoryId },
+        orderBy: { name: 'asc' }
+    });
+}
