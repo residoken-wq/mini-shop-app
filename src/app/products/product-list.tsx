@@ -10,11 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-    Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus, RefreshCw, Download, Edit, Trash2
+    Plus, Search, History, AlertTriangle, ArrowUpCircle, ArrowDownCircle, Package, FolderPlus, RefreshCw, Download, Edit, Trash2, Upload, FileSpreadsheet
 } from "lucide-react";
-import { createProduct, updateProduct, deleteProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices, bulkImportMarketProducts } from "./actions";
+import { createProduct, updateProduct, deleteProduct, adjustStock, getInventoryHistory, createCategory, getCategories, getMarketPrices, bulkImportMarketProducts, importProductsFromExcel } from "./actions";
 import { cn } from "@/lib/utils";
 import { MarketProduct } from "@/lib/market-types";
+import * as XLSX from "xlsx";
 
 // Extend Product to include Category relation if needed, or just use basic type
 type ProductWithCategory = Product & { category?: Category | null };
@@ -56,6 +57,12 @@ export function ProductList({ initialProducts }: ProductListProps) {
     useEffect(() => {
         getCategories().then(setCategories);
     }, []);
+
+    // Excel Import State
+    const [isExcelOpen, setIsExcelOpen] = useState(false);
+    const [excelData, setExcelData] = useState<any[]>([]);
+    const [isImporting, setIsImporting] = useState(false);
+    const [selectedCategoryForImport, setSelectedCategoryForImport] = useState("");
 
     const filteredProducts = useMemo(() => {
         const lower = searchQuery.toLowerCase();
@@ -229,6 +236,101 @@ export function ProductList({ initialProducts }: ProductListProps) {
         setIsLoadingMarket(false);
     };
 
+    const handleExcelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const data = evt.target?.result;
+            const workbook = XLSX.read(data, { type: "binary" });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+            // Map Excel columns to our expected format
+            const mapped = jsonData.map((row: any) => ({
+                name: row["Tên sản phẩm"] || row["name"] || row["Name"] || row["TÊN"] || row["ten"] || "",
+                sku: row["SKU"] || row["Mã"] || row["sku"] || row["Ma"] || "",
+                price: parseFloat(row["Giá bán"] || row["price"] || row["Price"] || row["Giá"] || 0),
+                cost: parseFloat(row["Giá nhập"] || row["cost"] || row["Cost"] || row["Giá vốn"] || 0),
+                stock: parseInt(row["Tồn kho"] || row["stock"] || row["Stock"] || row["Số lượng"] || 0),
+                unit: row["Đơn vị"] || row["unit"] || row["Unit"] || "kg",
+                category: row["Danh mục"] || row["category"] || row["Category"] || ""
+            }));
+
+            setExcelData(mapped.filter((r: any) => r.name));
+            setIsExcelOpen(true);
+        };
+        reader.readAsBinaryString(file);
+        e.target.value = ""; // Reset input
+    };
+
+    const handleExcelImport = async () => {
+        if (excelData.length === 0) return;
+        setIsImporting(true);
+        const res = await importProductsFromExcel(excelData, selectedCategoryForImport || undefined);
+        if (res.success) {
+            alert(`Đã import ${res.created} sản phẩm. Bỏ qua: ${res.skipped}`);
+            setIsExcelOpen(false);
+            setExcelData([]);
+            window.location.reload();
+        } else {
+            alert("Lỗi: " + res.error);
+        }
+        setIsImporting(false);
+    };
+
+    const downloadTemplate = () => {
+        // Create sample data with headers
+        const sampleData = [
+            {
+                "Tên sản phẩm": "Cà chua",
+                "SKU": "RAU-001",
+                "Giá bán": 25000,
+                "Giá nhập": 18000,
+                "Tồn kho": 100,
+                "Đơn vị": "kg",
+                "Danh mục": "RAU"
+            },
+            {
+                "Tên sản phẩm": "Dưa leo",
+                "SKU": "RAU-002",
+                "Giá bán": 20000,
+                "Giá nhập": 15000,
+                "Tồn kho": 50,
+                "Đơn vị": "kg",
+                "Danh mục": "RAU"
+            },
+            {
+                "Tên sản phẩm": "Thịt heo",
+                "SKU": "",
+                "Giá bán": 120000,
+                "Giá nhập": 100000,
+                "Tồn kho": 20,
+                "Đơn vị": "kg",
+                "Danh mục": "THIT"
+            }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(sampleData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Sản phẩm");
+
+        // Set column widths
+        ws["!cols"] = [
+            { wch: 20 }, // Tên sản phẩm
+            { wch: 12 }, // SKU
+            { wch: 12 }, // Giá bán
+            { wch: 12 }, // Giá nhập
+            { wch: 10 }, // Tồn kho
+            { wch: 10 }, // Đơn vị
+            { wch: 12 }  // Danh mục
+        ];
+
+        XLSX.writeFile(wb, "template_san_pham.xlsx");
+    };
+
     return (
         <div className="space-y-4 h-full flex flex-col">
             {/* Toolbar */}
@@ -246,6 +348,27 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 <Button variant="outline" onClick={handleScanMarket} disabled={isLoadingMarket}>
                     <RefreshCw className={cn("mr-2 h-4 w-4", isLoadingMarket ? "animate-spin" : "")} />
                     {isLoadingMarket ? "Đang quét..." : "Giá Chợ"}
+                </Button>
+
+                {/* Excel Import Button */}
+                <label>
+                    <Button variant="outline" asChild>
+                        <span>
+                            <FileSpreadsheet className="mr-2 h-4 w-4" />
+                            Import Excel
+                        </span>
+                    </Button>
+                    <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        className="hidden"
+                        onChange={handleExcelFile}
+                    />
+                </label>
+
+                {/* Download Template */}
+                <Button variant="ghost" size="icon" onClick={downloadTemplate} title="Tải template mẫu">
+                    <Download className="h-4 w-4" />
                 </Button>
 
                 {/* Create Category */}
@@ -512,6 +635,70 @@ export function ProductList({ initialProducts }: ProductListProps) {
                             </div>
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Excel Import Preview Dialog */}
+            <Dialog open={isExcelOpen} onOpenChange={setIsExcelOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileSpreadsheet className="h-5 w-5" />
+                            Import từ Excel ({excelData.length} sản phẩm)
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto">
+                        <div className="mb-4">
+                            <Label>Danh mục mặc định (nếu không có trong file)</Label>
+                            <select
+                                className="w-full mt-1 border rounded-md p-2"
+                                value={selectedCategoryForImport}
+                                onChange={e => setSelectedCategoryForImport(e.target.value)}
+                            >
+                                <option value="">-- Tự động tạo --</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name} ({cat.code})</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="border rounded-md overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead className="bg-muted">
+                                    <tr>
+                                        <th className="p-2 text-left">Tên sản phẩm</th>
+                                        <th className="p-2 text-left">SKU</th>
+                                        <th className="p-2 text-right">Giá bán</th>
+                                        <th className="p-2 text-right">Giá nhập</th>
+                                        <th className="p-2 text-center">Tồn</th>
+                                        <th className="p-2 text-left">ĐVT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {excelData.slice(0, 20).map((row, idx) => (
+                                        <tr key={idx} className={idx % 2 === 0 ? "bg-muted/30" : ""}>
+                                            <td className="p-2">{row.name}</td>
+                                            <td className="p-2 font-mono text-xs">{row.sku || "-"}</td>
+                                            <td className="p-2 text-right">{row.price?.toLocaleString()}</td>
+                                            <td className="p-2 text-right">{row.cost?.toLocaleString()}</td>
+                                            <td className="p-2 text-center">{row.stock}</td>
+                                            <td className="p-2">{row.unit}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {excelData.length > 20 && (
+                                <p className="text-center text-sm text-muted-foreground py-2">
+                                    ... và {excelData.length - 20} sản phẩm khác
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <DialogFooter className="pt-4">
+                        <Button variant="outline" onClick={() => setIsExcelOpen(false)}>Hủy</Button>
+                        <Button onClick={handleExcelImport} disabled={isImporting}>
+                            {isImporting ? "Đang import..." : `Import ${excelData.length} sản phẩm`}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

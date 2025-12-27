@@ -222,3 +222,94 @@ export async function getInventoryHistory(productId: string) {
         take: 50 // Limit to last 50
     });
 }
+
+// Excel Import Types
+interface ExcelProductRow {
+    name?: string;
+    sku?: string;
+    price?: number;
+    cost?: number;
+    stock?: number;
+    unit?: string;
+    category?: string;
+}
+
+export async function importProductsFromExcel(
+    products: ExcelProductRow[],
+    defaultCategoryId?: string
+) {
+    try {
+        let created = 0;
+        let skipped = 0;
+        const errors: string[] = [];
+
+        for (const row of products) {
+            // Validate required fields
+            if (!row.name || row.name.trim() === "") {
+                skipped++;
+                continue;
+            }
+
+            // Check if product already exists
+            const existing = await db.product.findFirst({
+                where: { name: row.name.trim() }
+            });
+
+            if (existing) {
+                skipped++;
+                continue;
+            }
+
+            // Find or create category
+            let categoryId = defaultCategoryId;
+            if (row.category && row.category.trim()) {
+                const cat = await db.category.findFirst({
+                    where: {
+                        OR: [
+                            { name: { contains: row.category.trim() } },
+                            { code: row.category.trim().toUpperCase() }
+                        ]
+                    }
+                });
+                if (cat) {
+                    categoryId = cat.id;
+                }
+            }
+
+            if (!categoryId) {
+                // Create a default category if none specified
+                let defaultCat = await db.category.findFirst({ where: { code: "KHAC" } });
+                if (!defaultCat) {
+                    defaultCat = await db.category.create({
+                        data: { name: "Khác", code: "KHAC" }
+                    });
+                }
+                categoryId = defaultCat.id;
+            }
+
+            // Generate SKU if not provided
+            const category = await db.category.findUnique({ where: { id: categoryId } });
+            const sku = row.sku?.trim() || await generateSku(category?.code || "SP");
+
+            await db.product.create({
+                data: {
+                    name: row.name.trim(),
+                    sku: sku,
+                    categoryId: categoryId,
+                    price: row.price || 0,
+                    cost: row.cost || 0,
+                    stock: row.stock || 0,
+                    unit: row.unit?.trim() || "kg"
+                }
+            });
+            created++;
+        }
+
+        revalidatePath("/products");
+        revalidatePath("/categories");
+        return { success: true, created, skipped, errors };
+    } catch (error) {
+        console.error("Import error:", error);
+        return { success: false, error: "Lỗi khi import sản phẩm" };
+    }
+}
