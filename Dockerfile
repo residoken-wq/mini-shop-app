@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM node:18-bullseye-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -29,13 +29,13 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
 # Production image, copy all the files and run next
-FROM node:20-slim AS runner
+FROM node:18-bullseye-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Install OpenSSL for Prisma
+# Install OpenSSL for Prisma (Bullseye has OpenSSL 1.1)
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/public ./public
