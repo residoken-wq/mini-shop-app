@@ -297,6 +297,73 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
             {/* NEW: Global Voice/Search Input (Always Visible) */}
 
 
+            {/* NEW: Global Voice/Search Input (Always Visible) */}
+            <div className="flex gap-2 shrink-0 flex-col">
+                <div className="flex gap-2">
+                    <VoiceInput
+                        ref={searchInputRef}
+                        placeholder="Nhập tên sản phẩm để tìm..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onTranscript={(val) => { setSearchQuery(val); }}
+                        className="flex-1"
+                    />
+                </div>
+
+                {/* PENDING ITEM CARD (Global Scope) */}
+                {pendingItem && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex flex-col sm:flex-row gap-4 items-center animate-in slide-in-from-top-2">
+                        <div className="bg-white p-2 rounded border shrink-0 hidden sm:block">
+                            <span className="text-2xl font-bold text-primary">?</span>
+                        </div>
+                        <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <p className="text-xs text-muted-foreground hidden sm:block">Sản phẩm</p>
+                                <p className="font-bold text-lg text-primary truncate">{pendingItem.product.name}</p>
+                                <p className="text-xs text-muted-foreground">Kho: {pendingItem.product.stock} {pendingItem.product.unit}</p>
+                            </div>
+                            <div className="flex flex-row sm:flex-col gap-2 sm:gap-1 justify-between">
+                                <div className="flex items-center gap-2 sm:justify-between text-sm">
+                                    <span>SL:</span>
+                                    <input
+                                        type="number"
+                                        className="w-16 border rounded px-1 text-right font-bold h-8"
+                                        value={pendingItem.quantity}
+                                        onChange={(e) => setPendingItem({ ...pendingItem, quantity: parseFloat(e.target.value) || 0 })}
+                                        onKeyDown={handlePendingKeyDown}
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 sm:justify-between text-sm">
+                                    <span>Giá:</span>
+                                    <input
+                                        type="number"
+                                        className="w-24 sm:w-20 border rounded px-1 text-right text-blue-600 font-bold h-8"
+                                        value={pendingItem.customPrice || pendingItem.product.price}
+                                        onChange={(e) => setPendingItem({ ...pendingItem, customPrice: parseFloat(e.target.value) || 0 })}
+                                        onKeyDown={handlePendingKeyDown}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                            <Button size="sm" className="flex-1" onClick={() => addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice)}>
+                                Thêm (Tiếp)
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-red-500 h-8 sm:h-6 flex-1 sm:flex-initial" onClick={() => setPendingItem(null)}>
+                                Hủy
+                            </Button>
+                        </div>
+                    </div>
+                )}
+                {/* Market Hint for Pending Item */}
+                {pendingItem && marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase()) && (
+                    <div className="text-xs text-muted-foreground flex justify-between px-2">
+                        <span>Giá chợ tham khảo: <span className="font-bold text-orange-600">{new Intl.NumberFormat('vi-VN').format(marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase())!.price)}</span></span>
+                    </div>
+                )}
+            </div>
+
             {/* Mobile Tab Switcher */}
             <div className="grid grid-cols-2 gap-2 lg:hidden shrink-0">
                 <Button
@@ -325,72 +392,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                 "flex-1 flex flex-col gap-4 overflow-hidden",
                 mobileTab === "cart" ? "hidden lg:flex" : "flex"
             )}>
-                {/* NEW: Global Voice/Search Input (Moved inside split view to hide on mobile cart tab) */}
-                <div className="flex gap-2 shrink-0 flex-col">
-                    <div className="flex gap-2">
-                        <VoiceInput
-                            ref={searchInputRef}
-                            placeholder="Nhập tên sản phẩm để tìm..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onTranscript={(val) => { setSearchQuery(val); }}
-                            className="flex-1"
-                        />
-                    </div>
 
-                    {/* PENDING ITEM CARD */}
-                    {pendingItem && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex flex-col sm:flex-row gap-4 items-center animate-in slide-in-from-top-2">
-                            <div className="bg-white p-2 rounded border shrink-0 hidden sm:block">
-                                <span className="text-2xl font-bold text-primary">?</span>
-                            </div>
-                            <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div>
-                                    <p className="text-xs text-muted-foreground hidden sm:block">Sản phẩm</p>
-                                    <p className="font-bold text-lg text-primary truncate">{pendingItem.product.name}</p>
-                                    <p className="text-xs text-muted-foreground">Kho: {pendingItem.product.stock} {pendingItem.product.unit}</p>
-                                </div>
-                                <div className="flex flex-row sm:flex-col gap-2 sm:gap-1 justify-between">
-                                    <div className="flex items-center gap-2 sm:justify-between text-sm">
-                                        <span>SL:</span>
-                                        <input
-                                            type="number"
-                                            className="w-16 border rounded px-1 text-right font-bold h-8"
-                                            value={pendingItem.quantity}
-                                            onChange={(e) => setPendingItem({ ...pendingItem, quantity: parseFloat(e.target.value) || 0 })}
-                                            onKeyDown={handlePendingKeyDown}
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2 sm:justify-between text-sm">
-                                        <span>Giá:</span>
-                                        <input
-                                            type="number"
-                                            className="w-24 sm:w-20 border rounded px-1 text-right text-blue-600 font-bold h-8"
-                                            value={pendingItem.customPrice || pendingItem.product.price}
-                                            onChange={(e) => setPendingItem({ ...pendingItem, customPrice: parseFloat(e.target.value) || 0 })}
-                                            onKeyDown={handlePendingKeyDown}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                                <Button size="sm" className="flex-1" onClick={() => addToCart(pendingItem.product, pendingItem.quantity, pendingItem.customPrice)}>
-                                    Thêm (Tiếp)
-                                </Button>
-                                <Button size="sm" variant="ghost" className="text-red-500 h-8 sm:h-6 flex-1 sm:flex-initial" onClick={() => setPendingItem(null)}>
-                                    Hủy
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                    {/* Market Hint for Pending Item */}
-                    {pendingItem && marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase()) && (
-                        <div className="text-xs text-muted-foreground flex justify-between px-2">
-                            <span>Giá chợ tham khảo: <span className="font-bold text-orange-600">{new Intl.NumberFormat('vi-VN').format(marketPrices.find(mp => mp.name.toLowerCase() === pendingItem.product.name.toLowerCase())!.price)}</span></span>
-                        </div>
-                    )}
-                </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4 overflow-y-auto pb-20 p-1">
                     {filteredProducts.map(product => {
