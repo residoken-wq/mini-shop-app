@@ -478,6 +478,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                     return (
                                         <div key={i} className="flex gap-4 p-3 border rounded-lg items-start">
                                             {mp.imageUrl && (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
                                                 <img src={mp.imageUrl} className="w-16 h-16 object-cover rounded-md" alt={mp.name} />
                                             )}
                                             <div className="flex-1">
