@@ -1,16 +1,15 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat openssl openssl-dev
+
+RUN apt-get update && apt-get install -y openssl libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json ./
 COPY prisma ./prisma/
-# COPY package-lock.json* ./ 
 
 # Force install to ignore local lockfile mismatches
 RUN npm install
@@ -25,25 +24,19 @@ COPY . .
 RUN npx prisma generate
 
 # Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN npm run build
 
 # Production image, copy all the files and run next
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Install OpenSSL and libc6-compat for Prisma
-RUN apk add --no-cache openssl libc6-compat
-
-# Run as root to avoid SQLite volume permission issues
-# RUN addgroup --system --gid 1001 nodejs
-# RUN adduser --system --uid 1001 nextjs
+# Install OpenSSL for Prisma
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/public ./public
 RUN mkdir .next
@@ -69,4 +62,3 @@ ENV HOSTNAME "0.0.0.0"
 
 # Ensure DB is synced. 
 CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
-
