@@ -3,7 +3,7 @@ FROM node:20-alpine AS base
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl openssl-dev
 
 WORKDIR /app
 
@@ -38,8 +38,8 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl
+# Install OpenSSL and libc6-compat for Prisma
+RUN apk add --no-cache openssl libc6-compat
 
 # Run as root to avoid SQLite volume permission issues
 # RUN addgroup --system --gid 1001 nodejs
@@ -55,6 +55,9 @@ COPY --from=builder /app/prisma ./prisma
 
 # Install prisma globally or locally to ensure 'npx prisma' works without downloading
 RUN npm install prisma @prisma/client
+
+# Generate Prisma client for this specific platform
+RUN npx prisma generate
 
 # Create data directory
 RUN mkdir -p /app/data
