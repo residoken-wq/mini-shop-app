@@ -12,6 +12,9 @@ import { MarketProduct } from "@/lib/market-scraper";
 import { Search, Plus, Trash2, UserPlus, ShoppingCart, Loader2, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from "@/components/ui/table";
+import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -462,41 +465,76 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                     </div>
 
                     {/* Cart Items */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-0">
                         {cart.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-50">
                                 <ShoppingCart className="h-12 w-12 mb-2" />
                                 <p>Giỏ hàng trống</p>
                             </div>
                         ) : (
-                            cart.map(item => {
-                                const activePrice = item.customPrice !== undefined ? item.customPrice : item.product.price;
-                                return (
-                                    <div key={item.product.id} className="flex gap-2 items-center">
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                {item.customPrice !== undefined && item.customPrice !== item.product.price && (
-                                                    <span className="line-through decoration-red-500">
-                                                        {new Intl.NumberFormat('vi-VN').format(item.product.price)}
-                                                    </span>
-                                                )}
-                                                <span className={item.customPrice !== undefined ? "font-bold text-blue-600" : ""}>
-                                                    {new Intl.NumberFormat('vi-VN').format(activePrice)} ₫
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, -1)}>-</Button>
-                                            <span className="w-6 text-center text-sm">{item.quantity}</span>
-                                            <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, 1)}>+</Button>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.product.id)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                );
-                            })
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[30%]">Tên SP</TableHead>
+                                        <TableHead className="w-[20%] text-center">SL</TableHead>
+                                        <TableHead className="w-[25%] text-right">Đơn giá</TableHead>
+                                        <TableHead className="w-[25%] text-right">Thành tiền</TableHead>
+                                        <TableHead className="w-[20px]"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {cart.map(item => {
+                                        const activePrice = item.customPrice !== undefined ? item.customPrice : item.product.price;
+                                        const total = activePrice * item.quantity;
+
+                                        return (
+                                            <TableRow key={item.product.id}>
+                                                <TableCell className="font-medium align-top py-2">
+                                                    <div className="line-clamp-2">{item.product.name}</div>
+                                                    <div className="text-xs text-muted-foreground">{item.product.unit}</div>
+                                                </TableCell>
+                                                <TableCell className="p-1 align-top">
+                                                    <Input
+                                                        type="number"
+                                                        className="w-full h-8 px-1 text-center"
+                                                        value={item.quantity}
+                                                        onChange={(e) => {
+                                                            const val = parseFloat(e.target.value);
+                                                            setCart(prev => prev.map(i => i.product.id === item.product.id ? { ...i, quantity: isNaN(val) ? 0 : val } : i));
+                                                        }}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1 align-top text-right">
+                                                    <Input
+                                                        type="number"
+                                                        className="w-full h-8 px-1 text-right"
+                                                        value={activePrice}
+                                                        onChange={(e) => {
+                                                            const val = parseFloat(e.target.value);
+                                                            setCart(prev => prev.map(i => i.product.id === item.product.id ? { ...i, customPrice: isNaN(val) ? 0 : val } : i));
+                                                        }}
+                                                        onFocus={(e) => e.target.select()}
+                                                    />
+                                                    {item.customPrice !== undefined && item.customPrice !== item.product.price && (
+                                                        <div className="text-[10px] text-muted-foreground line-through decoration-red-500 mt-1">
+                                                            {new Intl.NumberFormat('vi-VN').format(item.product.price)}
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold py-2 align-top">
+                                                    {new Intl.NumberFormat('vi-VN').format(total)}
+                                                </TableCell>
+                                                <TableCell className="p-1 align-top">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.product.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
                         )}
                     </div>
 
