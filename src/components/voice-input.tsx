@@ -12,6 +12,7 @@ interface VoiceInputProps {
     className?: string;
     value?: string;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export const VoiceInput = forwardRef<HTMLInputElement, VoiceInputProps>(({
@@ -19,7 +20,8 @@ export const VoiceInput = forwardRef<HTMLInputElement, VoiceInputProps>(({
     placeholder = "Nhập hoặc nói...",
     className,
     value,
-    onChange
+    onChange,
+    onKeyDown
 }, ref) => {
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef<any>(null);
@@ -66,6 +68,7 @@ export const VoiceInput = forwardRef<HTMLInputElement, VoiceInputProps>(({
                 placeholder={placeholder}
                 value={value}
                 onChange={onChange}
+                onKeyDown={onKeyDown}
                 className="pr-10"
             />
             <Button

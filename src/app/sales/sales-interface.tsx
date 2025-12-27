@@ -294,10 +294,7 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
 
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] gap-4">
-            {/* NEW: Global Voice/Search Input (Always Visible) */}
 
-
-            {/* NEW: Global Voice/Search Input (Always Visible) */}
             <div className="flex gap-2 shrink-0 flex-col">
                 <div className="flex gap-2">
                     <VoiceInput
@@ -305,7 +302,15 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                         placeholder="Nhập tên sản phẩm để tìm..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onTranscript={(val) => { setSearchQuery(val); }}
+                        onTranscript={(val) => {
+                            setSearchQuery(val);
+                            handleVoiceCommand(val);
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                handleVoiceCommand(searchQuery);
+                            }
+                        }}
                         className="flex-1"
                     />
                 </div>
@@ -453,8 +458,12 @@ export function SalesInterface({ initialProducts, initialCustomers }: SalesInter
                                 </p>
                             </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="text-xs h-7 text-muted-foreground hover:text-foreground" onClick={() => {
-                            if (cart.length > 0 && !confirm("Thay đổi khách hàng sẽ xóa giỏ hàng hiện tại. Tiếp tục?")) return;
+                        <Button variant="outline" size="sm" className="h-8 text-xs shrink-0 border-dashed" onClick={(e) => {
+                            e.stopPropagation();
+                            // Always allow changing customer, just clear cart if needed
+                            if (cart.length > 0) {
+                                if (!confirm("Thay đổi khách hàng sẽ xóa giỏ hàng. Tiếp tục?")) return;
+                            }
                             setSelectedCustomer(null);
                             setIsWalkIn(false);
                             setCart([]);
