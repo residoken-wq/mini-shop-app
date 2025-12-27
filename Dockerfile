@@ -11,6 +11,9 @@ WORKDIR /app
 COPY package.json ./
 COPY prisma ./prisma/
 
+# Delete lock file to force fresh install with correct versions
+RUN rm -f package-lock.json
+
 # Force install to ignore local lockfile mismatches
 RUN npm install
 
