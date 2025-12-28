@@ -16,9 +16,11 @@ import {
     AlertCircle,
     CheckCircle,
     ArrowRight,
-    ArrowLeft
+    ArrowLeft,
+    Clock,
+    FileText
 } from "lucide-react";
-import { findWholesaleCustomer, getPortalProducts, submitPortalOrder } from "./actions";
+import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders } from "./actions";
 
 interface Product {
     id: string;
@@ -65,6 +67,16 @@ export default function PortalPage() {
         error?: string;
     } | null>(null);
 
+    // Pending orders for wholesale customers
+    const [pendingOrders, setPendingOrders] = useState<{
+        id: string;
+        code: string;
+        total: number;
+        status: string;
+        createdAt: Date;
+        itemCount: number;
+    }[]>([]);
+
     const loadProducts = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -101,6 +113,11 @@ export default function PortalPage() {
             if (result.success && result.customer) {
                 setCustomer({ id: result.customer.id, name: result.customer.name });
                 setCustomerType("wholesale");
+
+                // Load pending orders for this customer
+                const orders = await getCustomerPendingOrders(result.customer.id);
+                setPendingOrders(orders);
+
                 setStep(2);
             } else {
                 setPhoneError(result.error || "Không tìm thấy khách hàng");
@@ -320,6 +337,44 @@ export default function PortalPage() {
                         </Button>
                     </div>
 
+                    {/* Pending Orders Section */}
+                    {pendingOrders.length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Clock className="w-5 h-5 text-amber-600" />
+                                <h3 className="font-semibold text-amber-800">
+                                    Đơn hàng chưa thanh toán ({pendingOrders.length})
+                                </h3>
+                            </div>
+                            <div className="space-y-2">
+                                {pendingOrders.map(order => (
+                                    <div
+                                        key={order.id}
+                                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <FileText className="w-4 h-4 text-gray-400" />
+                                            <div>
+                                                <p className="font-medium text-sm">{order.code}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {new Date(order.createdAt).toLocaleDateString('vi-VN')} • {order.itemCount} sản phẩm
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-bold text-amber-600">
+                                                {formatCurrency(order.total)}đ
+                                            </p>
+                                            <Badge variant="outline" className="text-xs">
+                                                {order.status === "PENDING" ? "Chờ xác nhận" : "Đã xác nhận"}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Search */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -332,81 +387,149 @@ export default function PortalPage() {
                     </div>
 
                     {/* Products Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {isLoading ? (
-                            <div className="col-span-full text-center py-8">Đang tải...</div>
+                            <div className="col-span-full text-center py-12">
+                                <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                                <p className="text-gray-500">Đang tải sản phẩm...</p>
+                            </div>
                         ) : filteredProducts.length === 0 ? (
-                            <div className="col-span-full text-center py-8 text-gray-500">
-                                Không tìm thấy sản phẩm
+                            <div className="col-span-full text-center py-12 text-gray-500">
+                                <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                <p>Không tìm thấy sản phẩm</p>
                             </div>
                         ) : (
                             filteredProducts.map(product => {
                                 const cartItem = cart.find(item => item.product.id === product.id);
+                                const isOutOfStock = product.stock <= 0;
+                                const isDisabled = product.isExpired || isOutOfStock;
+
                                 return (
                                     <div
                                         key={product.id}
-                                        className={`bg-white rounded-lg shadow p-3 space-y-2 ${product.isExpired ? "opacity-60" : ""
-                                            }`}
+                                        className={`
+                                            bg-white rounded-xl shadow-sm border overflow-hidden
+                                            transition-all duration-200 hover:shadow-lg hover:scale-[1.02]
+                                            ${isDisabled ? "opacity-60 grayscale" : ""}
+                                            ${cartItem ? "ring-2 ring-purple-500 ring-offset-2" : ""}
+                                        `}
                                     >
-                                        <div className="aspect-square bg-gray-100 rounded-md flex items-center justify-center text-3xl">
-                                            🥬
-                                        </div>
-                                        <div>
-                                            <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
-                                            <p className="text-xs text-gray-500">{product.unit}</p>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            {product.isExpired ? (
-                                                <div className="text-red-500 text-xs flex items-center gap-1">
-                                                    <AlertCircle className="w-3 h-3" />
-                                                    Hết hạn giá
+                                        {/* Product Image */}
+                                        <div className="aspect-square bg-gradient-to-b from-gray-50 to-gray-100 relative flex items-center justify-center">
+                                            {product.imageUrl ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img
+                                                    src={product.imageUrl}
+                                                    alt={product.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <span className={`text-4xl ${product.imageUrl ? 'hidden' : ''}`}>🥬</span>
+
+                                            {/* Stock Badge */}
+                                            {isOutOfStock && (
+                                                <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium text-center py-1">
+                                                    Hết hàng
                                                 </div>
-                                            ) : (
-                                                <span className="font-bold text-purple-600">
-                                                    {formatCurrency(product.displayPrice)}đ
-                                                </span>
+                                            )}
+
+                                            {/* Wholesale Price Indicator */}
+                                            {product.hasWholesalePrice && !product.isExpired && (
+                                                <Badge className="absolute top-2 right-2 bg-purple-500 text-white text-[10px]">
+                                                    Giá sỉ
+                                                </Badge>
+                                            )}
+
+                                            {/* Cart Quantity Badge */}
+                                            {cartItem && (
+                                                <div className="absolute bottom-2 right-2 bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
+                                                    {cartItem.quantity}
+                                                </div>
                                             )}
                                         </div>
 
-                                        {product.isExpired ? (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full text-red-500"
-                                                disabled
-                                            >
-                                                Liên hệ shop
-                                            </Button>
-                                        ) : cartItem ? (
+                                        {/* Product Info */}
+                                        <div className="p-3 space-y-2">
+                                            <h3 className="font-medium text-sm line-clamp-2 h-10">{product.name}</h3>
+
                                             <div className="flex items-center justify-between">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => updateQuantity(product.id, -1)}
-                                                >
-                                                    <Minus className="w-3 h-3" />
-                                                </Button>
-                                                <span className="font-medium">{cartItem.quantity}</span>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => updateQuantity(product.id, 1)}
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                </Button>
+                                                {product.isExpired ? (
+                                                    <div className="text-red-500 text-xs flex items-center gap-1">
+                                                        <AlertCircle className="w-3 h-3" />
+                                                        Giá hết hạn
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <span className="font-bold text-lg text-purple-600">
+                                                            {formatCurrency(product.displayPrice)}đ
+                                                        </span>
+                                                        <span className="text-xs text-gray-400 ml-1">/{product.unit}</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full"
-                                                onClick={() => addToCart(product)}
-                                            >
-                                                <Plus className="w-4 h-4 mr-1" /> Thêm
-                                            </Button>
-                                        )}
+
+                                            {/* Actions */}
+                                            {product.isExpired ? (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full text-red-500 border-red-200"
+                                                    disabled
+                                                >
+                                                    <AlertCircle className="w-4 h-4 mr-1" />
+                                                    Liên hệ shop
+                                                </Button>
+                                            ) : isOutOfStock ? (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full text-gray-400 border-gray-200"
+                                                    disabled
+                                                >
+                                                    Hết hàng
+                                                </Button>
+                                            ) : cartItem ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-9 w-9 rounded-full"
+                                                        onClick={() => updateQuantity(product.id, -0.5)}
+                                                    >
+                                                        <Minus className="w-4 h-4" />
+                                                    </Button>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.1"
+                                                        min="0"
+                                                        value={cartItem.quantity}
+                                                        onChange={(e) => setQuantity(product.id, parseFloat(e.target.value) || 0)}
+                                                        className="h-9 text-center font-medium flex-1"
+                                                    />
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-9 w-9 rounded-full"
+                                                        onClick={() => updateQuantity(product.id, 0.5)}
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    variant="default"
+                                                    size="sm"
+                                                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                                                    onClick={() => addToCart(product)}
+                                                >
+                                                    <Plus className="w-4 h-4 mr-1" /> Thêm vào giỏ
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })

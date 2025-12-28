@@ -11,7 +11,8 @@ import {
     Truck,
     Banknote,
     Users,
-    Settings
+    Settings,
+    UserCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -70,6 +71,12 @@ export function MainNav({ className, setOpen, ...props }: MainNavProps) {
             label: "Thu chi & Nợ",
             icon: Banknote,
             active: pathname === "/finance",
+        },
+        {
+            href: "/users",
+            label: "Người dùng",
+            icon: UserCircle,
+            active: pathname === "/users",
         },
         {
             href: "/settings",

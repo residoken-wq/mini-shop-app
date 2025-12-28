@@ -52,7 +52,8 @@ model Product {
 model Customer {
   id           String   @id @default(uuid())
   name         String
-  phone        String?
+  phone        String?  // Primary phone (legacy, kept for backward compatibility)
+  phones       String?  // JSON array of up to 5 phone numbers for portal verification
   address      String?
   debt         Float    @default(0)
   customerType String   @default("retail") // "retail" or "wholesale"

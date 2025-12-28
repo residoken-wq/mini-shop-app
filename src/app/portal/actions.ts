@@ -3,17 +3,34 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-// Find wholesale customer by phone number
+// Find wholesale customer by phone number (searches primary phone + phones array)
 export async function findWholesaleCustomer(phone: string) {
     if (!phone || phone.trim().length < 3) {
         return { success: false, error: "Vui lòng nhập số điện thoại" };
     }
 
-    const customer = await db.customer.findFirst({
-        where: {
-            phone: { contains: phone.trim() },
-            customerType: "wholesale"
+    const searchPhone = phone.trim();
+
+    // Get all wholesale customers and search in phones array
+    const customers = await db.customer.findMany({
+        where: { customerType: "wholesale" }
+    });
+
+    // Find customer with matching phone (primary or in phones array)
+    const customer = customers.find(c => {
+        // Check primary phone
+        if (c.phone && c.phone.includes(searchPhone)) return true;
+
+        // Check phones array (stored as JSON string)
+        if (c.phones) {
+            try {
+                const phonesArray = JSON.parse(c.phones) as string[];
+                return phonesArray.some(p => p.includes(searchPhone));
+            } catch {
+                return false;
+            }
         }
+        return false;
     });
 
     if (!customer) {
@@ -23,10 +40,43 @@ export async function findWholesaleCustomer(phone: string) {
     return { success: true, customer };
 }
 
+// Get customer's pending/unpaid orders
+export async function getCustomerPendingOrders(customerId: string) {
+    const orders = await db.order.findMany({
+        where: {
+            customerId,
+            status: { in: ["PENDING", "CONFIRMED"] }, // Unpaid orders
+            type: "SALE"
+        },
+        orderBy: { createdAt: "desc" },
+        include: {
+            items: {
+                include: { product: true }
+            }
+        }
+    });
+
+    return orders.map(order => ({
+        id: order.id,
+        code: order.code,
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt,
+        itemCount: order.items.length,
+        items: order.items.map(item => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.quantity * item.price
+        }))
+    }));
+}
+
+
 // Get products with appropriate pricing
 export async function getPortalProducts(customerId?: string) {
+    // Show ALL products, not just those with stock > 0
     const products = await db.product.findMany({
-        where: { stock: { gt: 0 } },
         orderBy: { name: "asc" },
         select: {
             id: true,

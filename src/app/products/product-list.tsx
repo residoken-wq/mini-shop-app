@@ -397,57 +397,244 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 {/* Create Product Button */}
                 <Button onClick={handleOpenCreate}><Plus className="mr-2 h-4 w-4" /> Thêm SP</Button>
 
-                {/* Dialog for Create/Edit */}
+                {/* Dialog for Create/Edit - Modern Redesign */}
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogContent>
-                        <DialogHeader><DialogTitle>{mode === "CREATE" ? "Thêm Sản Phẩm Mới" : "Sửa Sản Phẩm"}</DialogTitle></DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                                <Label className="text-left md:text-right">Danh mục</Label>
-                                <select
-                                    className="col-span-3 flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={newProduct.categoryId}
-                                    onChange={e => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                                >
-                                    <option value="">-- Chọn danh mục --</option>
-                                    {categories.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                                <Label className="text-left md:text-right">Tên SP</Label>
-                                <Input value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} className="col-span-3" />
-                            </div>
-                            <div className="col-start-1 md:col-start-2 col-span-4 md:col-span-3 text-xs text-muted-foreground">
-                                * Mã SKU sẽ được tạo tự động theo danh mục (VD: RAU-001)
-                            </div>
-                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                                <Label className="text-left md:text-right">Giá Bán</Label>
-                                <Input type="number" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} className="col-span-3" />
-                            </div>
-                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                                <Label className="text-left md:text-right">Giá Vốn</Label>
-                                <Input type="number" value={newProduct.cost} onChange={e => setNewProduct({ ...newProduct, cost: e.target.value })} className="col-span-3" />
-                            </div>
-                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                                <Label className="text-left md:text-right">Đơn vị</Label>
-                                <Input value={newProduct.unit} onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })} className="col-span-3" placeholder="kg, cái, bó..." />
-                            </div>
-                            {mode === "CREATE" && (
-                                <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                                    <Label className="text-left md:text-right">Tồn Đầu</Label>
-                                    <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })} className="col-span-3" />
+                    <DialogContent className="max-w-2xl p-0 overflow-hidden">
+                        {/* Header with gradient */}
+                        <div className="bg-gradient-to-r from-purple-600 to-pink-500 p-6 text-white">
+                            <DialogTitle className="text-xl font-bold flex items-center gap-3">
+                                {mode === "CREATE" ? (
+                                    <>
+                                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                                            <Plus className="w-5 h-5" />
+                                        </div>
+                                        Thêm Sản Phẩm Mới
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                                            <Edit className="w-5 h-5" />
+                                        </div>
+                                        Chỉnh Sửa Sản Phẩm
+                                    </>
+                                )}
+                            </DialogTitle>
+                            <p className="text-white/70 text-sm mt-2">
+                                {mode === "CREATE" ? "Điền thông tin để tạo sản phẩm mới" : `Đang sửa: ${selectedProduct?.name}`}
+                            </p>
+                        </div>
+
+                        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                            {/* Section 1: Basic Info */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                                    <Package className="w-4 h-4" />
+                                    Thông tin cơ bản
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Category */}
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">
+                                            Danh mục <span className="text-red-500">*</span>
+                                        </Label>
+                                        <select
+                                            className="w-full flex h-11 items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                            value={newProduct.categoryId}
+                                            onChange={e => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                                        >
+                                            <option value="">🏷️ Chọn danh mục...</option>
+                                            {categories.map(c => (
+                                                <option key={c.id} value={c.id}>📁 {c.name} ({c.code})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Unit */}
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Đơn vị tính</Label>
+                                        <select
+                                            className="w-full flex h-11 items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                            value={newProduct.unit}
+                                            onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })}
+                                        >
+                                            <option value="kg">⚖️ Kilogram (kg)</option>
+                                            <option value="g">⚖️ Gram (g)</option>
+                                            <option value="bó">🌿 Bó</option>
+                                            <option value="cái">📦 Cái</option>
+                                            <option value="hộp">📦 Hộp</option>
+                                            <option value="gói">📦 Gói</option>
+                                            <option value="chai">🍾 Chai</option>
+                                            <option value="lon">🥫 Lon</option>
+                                            <option value="túi">👜 Túi</option>
+                                            <option value="khay">📋 Khay</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            )}
-                            <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                                <Label className="text-left md:text-right">Link Ảnh</Label>
-                                <Input value={newProduct.imageUrl} onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })} className="col-span-3" placeholder="https://..." />
+
+                                {/* Product Name - Full Width */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">
+                                        Tên sản phẩm <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        value={newProduct.name}
+                                        onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                                        placeholder="VD: Cà chua bi, Bắp cải thảo, Thịt heo ba rọi..."
+                                        className="h-11 text-base border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        💡 Mã SKU sẽ được tạo tự động theo danh mục (VD: RAU-001)
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="border-t border-gray-100" />
+
+                            {/* Section 2: Pricing */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                                    💰 Thông tin giá
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Cost Price */}
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Giá nhập (Giá vốn)</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                value={newProduct.cost}
+                                                onChange={e => setNewProduct({ ...newProduct, cost: e.target.value })}
+                                                placeholder="0"
+                                                className="h-11 pr-12 text-base border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">VNĐ</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Selling Price */}
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Giá bán</Label>
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                value={newProduct.price}
+                                                onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                                                placeholder="0"
+                                                className="h-11 pr-12 text-base border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">VNĐ</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Profit Margin Display */}
+                                {parseFloat(newProduct.cost) > 0 && parseFloat(newProduct.price) > 0 && (
+                                    <div className={cn(
+                                        "p-3 rounded-lg flex items-center justify-between",
+                                        parseFloat(newProduct.price) > parseFloat(newProduct.cost)
+                                            ? "bg-green-50 border border-green-200"
+                                            : "bg-red-50 border border-red-200"
+                                    )}>
+                                        <span className="text-sm font-medium">
+                                            {parseFloat(newProduct.price) > parseFloat(newProduct.cost) ? "📈" : "📉"} Lợi nhuận dự kiến
+                                        </span>
+                                        <div className="text-right">
+                                            <span className={cn(
+                                                "font-bold",
+                                                parseFloat(newProduct.price) > parseFloat(newProduct.cost) ? "text-green-600" : "text-red-600"
+                                            )}>
+                                                {new Intl.NumberFormat('vi-VN').format(parseFloat(newProduct.price) - parseFloat(newProduct.cost))}đ
+                                            </span>
+                                            <span className="text-xs text-gray-500 ml-2">
+                                                ({((parseFloat(newProduct.price) - parseFloat(newProduct.cost)) / parseFloat(newProduct.cost) * 100).toFixed(1)}%)
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Divider */}
+                            <div className="border-t border-gray-100" />
+
+                            {/* Section 3: Inventory & Image */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                                    📦 Kho & Hình ảnh
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Initial Stock (only for CREATE) */}
+                                    {mode === "CREATE" && (
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Tồn kho ban đầu</Label>
+                                            <Input
+                                                type="number"
+                                                value={newProduct.stock}
+                                                onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
+                                                placeholder="0"
+                                                className="h-11 text-base border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Image URL */}
+                                    <div className={cn("space-y-2", mode === "EDIT" && "col-span-2")}>
+                                        <Label className="text-sm font-medium">Link hình ảnh (URL)</Label>
+                                        <Input
+                                            value={newProduct.imageUrl}
+                                            onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })}
+                                            placeholder="https://example.com/image.jpg"
+                                            className="h-11 text-base border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Image Preview */}
+                                {newProduct.imageUrl && (
+                                    <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={newProduct.imageUrl}
+                                            alt="Preview"
+                                            className="w-16 h-16 object-cover rounded-lg border shadow-sm"
+                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                        />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium">Xem trước hình ảnh</p>
+                                            <p className="text-xs text-gray-500 truncate">{newProduct.imageUrl}</p>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setNewProduct({ ...newProduct, imageUrl: "" })}
+                                            className="text-red-500 hover:text-red-700"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button onClick={handleSaveProduct}>Lưu</Button>
-                        </DialogFooter>
+
+                        {/* Footer with Actions */}
+                        <div className="border-t bg-gray-50 p-4 flex justify-between items-center">
+                            <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
+                                Hủy
+                            </Button>
+                            <Button
+                                onClick={handleSaveProduct}
+                                className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white px-8"
+                            >
+                                {mode === "CREATE" ? (
+                                    <><Plus className="w-4 h-4 mr-2" /> Tạo sản phẩm</>
+                                ) : (
+                                    <><Edit className="w-4 h-4 mr-2" /> Lưu thay đổi</>
+                                )}
+                            </Button>
+                        </div>
                     </DialogContent>
                 </Dialog>
             </div>

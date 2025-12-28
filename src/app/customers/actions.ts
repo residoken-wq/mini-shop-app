@@ -14,7 +14,7 @@ export async function getCustomers() {
     });
 }
 
-export async function createCustomer(data: { name: string; phone?: string; address?: string; customerType?: string }) {
+export async function createCustomer(data: { name: string; phone?: string; phones?: string; address?: string; customerType?: string }) {
     try {
         if (!data.name) return { success: false, error: "Name is required" };
 
@@ -22,6 +22,7 @@ export async function createCustomer(data: { name: string; phone?: string; addre
             data: {
                 name: data.name,
                 phone: data.phone,
+                phones: data.phones,
                 address: data.address,
                 customerType: data.customerType || "retail",
             }
@@ -35,13 +36,14 @@ export async function createCustomer(data: { name: string; phone?: string; addre
     }
 }
 
-export async function updateCustomer(id: string, data: { name: string; phone?: string; address?: string; customerType?: string }) {
+export async function updateCustomer(id: string, data: { name: string; phone?: string; phones?: string; address?: string; customerType?: string }) {
     try {
         const customer = await db.customer.update({
             where: { id },
             data: {
                 name: data.name,
                 phone: data.phone,
+                phones: data.phones,
                 address: data.address,
                 customerType: data.customerType || "retail",
             }

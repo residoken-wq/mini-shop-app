@@ -38,7 +38,7 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [formData, setFormData] = useState({
         name: "",
-        phone: "",
+        phones: ["", "", "", "", ""] as string[],
         address: "",
         customerType: "retail" as "retail" | "wholesale"
     });
@@ -52,16 +52,32 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
 
     const handleOpenCreate = () => {
         setMode("CREATE");
-        setFormData({ name: "", phone: "", address: "", customerType: "retail" });
+        setFormData({ name: "", phones: ["", "", "", "", ""], address: "", customerType: "retail" });
         setIsOpen(true);
     };
 
     const handleOpenEdit = (c: Customer) => {
         setMode("EDIT");
         setSelectedCustomer(c);
+
+        // Parse phones from JSON or use primary phone
+        let phonesArray = ["", "", "", "", ""];
+        const customerAny = c as Customer & { phones?: string };
+        if (customerAny.phones) {
+            try {
+                const parsed = JSON.parse(customerAny.phones);
+                phonesArray = [...parsed, "", "", "", "", ""].slice(0, 5);
+            } catch {
+                // Fallback to primary phone
+                if (c.phone) phonesArray[0] = c.phone;
+            }
+        } else if (c.phone) {
+            phonesArray[0] = c.phone;
+        }
+
         setFormData({
             name: c.name,
-            phone: c.phone || "",
+            phones: phonesArray,
             address: c.address || "",
             customerType: (c.customerType as "retail" | "wholesale") || "retail"
         });
@@ -69,8 +85,18 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
     };
 
     const handleSubmit = async () => {
+        // Filter out empty phones and get first as primary
+        const validPhones = formData.phones.filter(p => p.trim());
+        const submitData = {
+            name: formData.name,
+            phone: validPhones[0] || "",
+            phones: validPhones.length > 0 ? JSON.stringify(validPhones) : undefined,
+            address: formData.address,
+            customerType: formData.customerType
+        };
+
         if (mode === "CREATE") {
-            const res = await createCustomer(formData);
+            const res = await createCustomer(submitData);
             if (res.success && res.customer) {
                 setCustomers([{ ...res.customer, _count: { orders: 0 } }, ...customers]);
                 setIsOpen(false);
@@ -79,7 +105,7 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
             }
         } else {
             if (!selectedCustomer) return;
-            const res = await updateCustomer(selectedCustomer.id, formData);
+            const res = await updateCustomer(selectedCustomer.id, submitData);
             if (res.success && res.customer) {
                 setCustomers(customers.map(c => c.id === selectedCustomer.id ? { ...res.customer!, _count: c._count } : c));
                 setIsOpen(false);
@@ -241,13 +267,25 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
-                            <Label className="text-left md:text-right">SĐT</Label>
-                            <Input
-                                value={formData.phone}
-                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                className="col-span-3"
-                            />
+                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-start">
+                            <Label className="text-left md:text-right pt-2">SĐT Portal</Label>
+                            <div className="col-span-3 space-y-2">
+                                <p className="text-xs text-muted-foreground mb-2">
+                                    Nhập tối đa 5 số điện thoại để xác thực trên Portal (mỗi dòng 1 số)
+                                </p>
+                                {[0, 1, 2, 3, 4].map(idx => (
+                                    <Input
+                                        key={idx}
+                                        placeholder={`SĐT ${idx + 1}${idx === 0 ? " (chính)" : ""}`}
+                                        value={formData.phones[idx] || ""}
+                                        onChange={e => {
+                                            const newPhones = [...formData.phones];
+                                            newPhones[idx] = e.target.value;
+                                            setFormData({ ...formData, phones: newPhones });
+                                        }}
+                                    />
+                                ))}
+                            </div>
                         </div>
                         <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
                             <Label className="text-left md:text-right">Địa chỉ</Label>
