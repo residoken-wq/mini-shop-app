@@ -3,10 +3,15 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-// Simple password hashing (in production use bcrypt)
+// Same password hash as auth.ts - MUST match exactly!
 function hashPassword(password: string): string {
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(password + 'mini-shop-salt').digest('hex');
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return hash.toString(16);
 }
 
 export async function getUsers() {
