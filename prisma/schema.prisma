@@ -100,6 +100,11 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Delivery info for portal orders
+  recipientName    String?
+  recipientPhone   String?
+  deliveryAddress  String?
+
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
 
@@ -115,7 +120,7 @@ model OrderItem {
   order     Order    @relation(fields: [orderId], references: [id])
   productId String
   product   Product  @relation(fields: [productId], references: [id])
-  quantity  Int
+  quantity  Float    // Changed to Float for decimal quantities (e.g., 0.5kg)
   price     Float
 }
 

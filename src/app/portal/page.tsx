@@ -53,6 +53,11 @@ export default function PortalPage() {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Delivery info
+    const [recipientName, setRecipientName] = useState("");
+    const [recipientPhone, setRecipientPhone] = useState("");
+    const [deliveryAddress, setDeliveryAddress] = useState("");
+
     const [orderResult, setOrderResult] = useState<{
         success: boolean;
         orderCode?: string;
@@ -126,11 +131,24 @@ export default function PortalPage() {
     const updateQuantity = (productId: string, delta: number) => {
         setCart(cart.map(item => {
             if (item.product.id === productId) {
-                const newQty = Math.max(0, item.quantity + delta);
+                const newQty = Math.max(0, Math.round((item.quantity + delta) * 10) / 10);
                 return { ...item, quantity: newQty };
             }
             return item;
         }).filter(item => item.quantity > 0));
+    };
+
+    const setQuantity = (productId: string, qty: number) => {
+        if (qty <= 0) {
+            setCart(cart.filter(item => item.product.id !== productId));
+        } else {
+            setCart(cart.map(item => {
+                if (item.product.id === productId) {
+                    return { ...item, quantity: qty };
+                }
+                return item;
+            }));
+        }
     };
 
     const removeFromCart = (productId: string) => {
@@ -158,6 +176,9 @@ export default function PortalPage() {
             const result = await submitPortalOrder({
                 customerType: customerType!,
                 customerId: customer?.id,
+                recipientName,
+                recipientPhone,
+                deliveryAddress,
                 items: cart.map(item => ({
                     productId: item.product.id,
                     quantity: item.quantity,
@@ -165,9 +186,10 @@ export default function PortalPage() {
                 }))
             });
 
-            setOrderResult(result);
             if (result.success) {
-                setStep(3);
+                setOrderResult(result);
+            } else {
+                alert(result.error);
             }
         } finally {
             setIsLoading(false);
@@ -181,6 +203,9 @@ export default function PortalPage() {
         setCustomer(null);
         setCart([]);
         setOrderResult(null);
+        setRecipientName("");
+        setRecipientPhone("");
+        setDeliveryAddress("");
     };
 
     return (
@@ -444,8 +469,45 @@ export default function PortalPage() {
                         )}
                     </div>
 
-                    {/* Cart Items */}
+                    {/* Delivery Info Form */}
+                    <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                        <h3 className="font-semibold text-gray-700">Thông tin giao hàng</h3>
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">
+                                Tên người nhận *
+                            </label>
+                            <Input
+                                value={recipientName}
+                                onChange={(e) => setRecipientName(e.target.value)}
+                                placeholder="Nhập tên người nhận hàng"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">
+                                Số điện thoại giao hàng *
+                            </label>
+                            <Input
+                                type="tel"
+                                value={recipientPhone}
+                                onChange={(e) => setRecipientPhone(e.target.value)}
+                                placeholder="Nhập số điện thoại"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">
+                                Địa chỉ giao hàng *
+                            </label>
+                            <Input
+                                value={deliveryAddress}
+                                onChange={(e) => setDeliveryAddress(e.target.value)}
+                                placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Cart Items with editable quantity */}
                     <div className="space-y-3">
+                        <h3 className="font-semibold text-gray-700">Sản phẩm ({cart.length})</h3>
                         {cart.map(item => (
                             <div
                                 key={item.product.id}
@@ -457,10 +519,36 @@ export default function PortalPage() {
                                 <div className="flex-1">
                                     <h4 className="font-medium">{item.product.name}</h4>
                                     <p className="text-sm text-gray-500">
-                                        {formatCurrency(item.product.displayPrice)}đ × {item.quantity}
+                                        {formatCurrency(item.product.displayPrice)}đ/{item.product.unit}
                                     </p>
                                 </div>
-                                <div className="text-right">
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => updateQuantity(item.product.id, -0.5)}
+                                    >
+                                        <Minus className="w-3 h-3" />
+                                    </Button>
+                                    <Input
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        value={item.quantity}
+                                        onChange={(e) => setQuantity(item.product.id, parseFloat(e.target.value) || 0)}
+                                        className="w-16 text-center h-8 px-1"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => updateQuantity(item.product.id, 0.5)}
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                                <div className="text-right min-w-[80px]">
                                     <p className="font-bold">
                                         {formatCurrency(item.product.displayPrice * item.quantity)}đ
                                     </p>

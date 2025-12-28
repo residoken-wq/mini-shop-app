@@ -80,14 +80,27 @@ export async function getPortalProducts(customerId?: string) {
 export async function submitPortalOrder(data: {
     customerType: "retail" | "wholesale";
     customerId?: string;
-    customerName?: string;
-    customerPhone?: string;
+    // Delivery info
+    recipientName?: string;
+    recipientPhone?: string;
+    deliveryAddress?: string;
     items: { productId: string; quantity: number; price: number }[];
 }) {
     try {
         // Validate
         if (data.items.length === 0) {
             return { success: false, error: "Vui lòng chọn ít nhất 1 sản phẩm" };
+        }
+
+        // Validate delivery info
+        if (!data.recipientName?.trim()) {
+            return { success: false, error: "Vui lòng nhập tên người nhận" };
+        }
+        if (!data.recipientPhone?.trim()) {
+            return { success: false, error: "Vui lòng nhập số điện thoại giao hàng" };
+        }
+        if (!data.deliveryAddress?.trim()) {
+            return { success: false, error: "Vui lòng nhập địa chỉ giao hàng" };
         }
 
         // Check for expired prices (price = 0)
@@ -122,6 +135,9 @@ export async function submitPortalOrder(data: {
                 status: "PENDING",
                 total,
                 customerId: data.customerId || null,
+                recipientName: data.recipientName,
+                recipientPhone: data.recipientPhone,
+                deliveryAddress: data.deliveryAddress,
                 items: {
                     create: data.items.map(item => ({
                         productId: item.productId,
@@ -150,3 +166,4 @@ export async function submitPortalOrder(data: {
         return { success: false, error: "Đã xảy ra lỗi khi tạo đơn hàng" };
     }
 }
+
