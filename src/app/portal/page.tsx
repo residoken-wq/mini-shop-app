@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -60,14 +60,7 @@ export default function PortalPage() {
         error?: string;
     } | null>(null);
 
-    // Load products when step 2 is reached
-    useEffect(() => {
-        if (step === 2) {
-            loadProducts();
-        }
-    }, [step, customer]);
-
-    const loadProducts = async () => {
+    const loadProducts = useCallback(async () => {
         setIsLoading(true);
         try {
             const data = await getPortalProducts(customer?.id);
@@ -75,7 +68,14 @@ export default function PortalPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [customer?.id]);
+
+    // Load products when step 2 is reached
+    useEffect(() => {
+        if (step === 2) {
+            loadProducts();
+        }
+    }, [step, loadProducts]);
 
     const handleSelectRetail = () => {
         setCustomerType("retail");
@@ -190,8 +190,8 @@ export default function PortalPage() {
                 {[1, 2, 3].map((s) => (
                     <div key={s} className="flex items-center">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= s
-                                ? "bg-purple-500 text-white"
-                                : "bg-gray-200 text-gray-500"
+                            ? "bg-purple-500 text-white"
+                            : "bg-gray-200 text-gray-500"
                             }`}>
                             {s}
                         </div>

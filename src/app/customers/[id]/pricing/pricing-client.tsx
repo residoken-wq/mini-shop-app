@@ -406,7 +406,7 @@ export function PricingClient({
                         {wholesalePrices.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                                    Chưa có giá nào. Bấm "Thêm giá" hoặc "Apply All" để bắt đầu.
+                                    Chưa có giá nào. Bấm &quot;Thêm giá&quot; hoặc &quot;Apply All&quot; để bắt đầu.
                                 </TableCell>
                             </TableRow>
                         ) : (
