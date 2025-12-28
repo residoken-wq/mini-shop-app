@@ -5,14 +5,22 @@ import { db } from "@/lib/db";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// Force dynamic rendering to avoid static generation errors
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
     title: "Đặt hàng | Portal",
     description: "Portal đặt hàng",
 };
 
 async function getShopSettings() {
-    const settings = await db.shopSettings.findFirst();
-    return settings || { name: "Mini Shop", phone: "0123-456-789", address: "", email: "" };
+    try {
+        const settings = await db.shopSettings.findFirst();
+        return settings || { name: "Mini Shop", phone: "0123-456-789", address: "", email: "" };
+    } catch {
+        // Fallback when database is not available (e.g., during build)
+        return { name: "Mini Shop", phone: "0123-456-789", address: "", email: "" };
+    }
 }
 
 export default async function PortalLayout({

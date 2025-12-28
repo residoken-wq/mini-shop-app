@@ -29,6 +29,10 @@ RUN npx prisma generate
 # Next.js collects completely anonymous telemetry data about general usage.
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# Set a dummy DATABASE_URL for build time (required for Prisma during Next.js build)
+# The actual DATABASE_URL will be provided at runtime
+ENV DATABASE_URL "file:./build-placeholder.db"
+
 RUN npm run build
 
 # Production image, copy all the files and run next
