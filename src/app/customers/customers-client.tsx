@@ -10,9 +10,18 @@ import {
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Plus, Search, User, MapPin, Phone } from "lucide-react";
+import { Edit, Trash2, Plus, Search, User, MapPin, Phone, FileText } from "lucide-react";
 import { createCustomer, updateCustomer, deleteCustomer } from "./actions";
+import Link from "next/link";
 
 interface CustomersClientProps {
     initialCustomers: (Customer & { _count: { orders: number } })[];
@@ -21,28 +30,41 @@ interface CustomersClientProps {
 export default function CustomersClient({ initialCustomers }: CustomersClientProps) {
     const [customers, setCustomers] = useState(initialCustomers);
     const [search, setSearch] = useState("");
+    const [filterType, setFilterType] = useState<"all" | "retail" | "wholesale">("all");
 
     // Dialog State
     const [isOpen, setIsOpen] = useState(false);
     const [mode, setMode] = useState<"CREATE" | "EDIT">("CREATE");
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-    const [formData, setFormData] = useState({ name: "", phone: "", address: "" });
+    const [formData, setFormData] = useState({
+        name: "",
+        phone: "",
+        address: "",
+        customerType: "retail" as "retail" | "wholesale"
+    });
 
-    const filtered = customers.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        (c.phone && c.phone.includes(search))
-    );
+    const filtered = customers.filter(c => {
+        const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
+            (c.phone && c.phone.includes(search));
+        const matchesType = filterType === "all" || c.customerType === filterType;
+        return matchesSearch && matchesType;
+    });
 
     const handleOpenCreate = () => {
         setMode("CREATE");
-        setFormData({ name: "", phone: "", address: "" });
+        setFormData({ name: "", phone: "", address: "", customerType: "retail" });
         setIsOpen(true);
     };
 
     const handleOpenEdit = (c: Customer) => {
         setMode("EDIT");
         setSelectedCustomer(c);
-        setFormData({ name: c.name, phone: c.phone || "", address: c.address || "" });
+        setFormData({
+            name: c.name,
+            phone: c.phone || "",
+            address: c.address || "",
+            customerType: (c.customerType as "retail" | "wholesale") || "retail"
+        });
         setIsOpen(true);
     };
 
@@ -91,13 +113,25 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
                 </Button>
             </div>
 
-            <div className="flex items-center gap-2 max-w-sm">
-                <Search className="h-4 w-4" />
-                <Input
-                    placeholder="Tìm tên, sđt..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                />
+            <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 max-w-sm">
+                    <Search className="h-4 w-4" />
+                    <Input
+                        placeholder="Tìm tên, sđt..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                    />
+                </div>
+                <Select value={filterType} onValueChange={(v) => setFilterType(v as typeof filterType)}>
+                    <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Loại khách" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả</SelectItem>
+                        <SelectItem value="retail">Khách lẻ</SelectItem>
+                        <SelectItem value="wholesale">Khách sỉ</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <div className="border rounded-md">
@@ -105,6 +139,7 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
                     <TableHeader>
                         <TableRow>
                             <TableHead>Tên</TableHead>
+                            <TableHead>Loại</TableHead>
                             <TableHead>Liên hệ</TableHead>
                             <TableHead>Địa chỉ</TableHead>
                             <TableHead>Công nợ</TableHead>
@@ -121,6 +156,13 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
                                         </div>
                                         {c.name}
                                     </div>
+                                </TableCell>
+                                <TableCell>
+                                    {c.customerType === "wholesale" ? (
+                                        <Badge className="bg-purple-100 text-purple-800">Sỉ</Badge>
+                                    ) : (
+                                        <Badge variant="secondary">Lẻ</Badge>
+                                    )}
                                 </TableCell>
                                 <TableCell>
                                     {c.phone ? (
@@ -141,18 +183,27 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
                                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(c.debt)}
                                     </span>
                                 </TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(c)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(c.id, c._count.orders)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                <TableCell className="text-right">
+                                    <div className="flex justify-end gap-1">
+                                        {c.customerType === "wholesale" && (
+                                            <Link href={`/customers/${c.id}/pricing`}>
+                                                <Button variant="ghost" size="icon" title="Quản lý bảng giá">
+                                                    <FileText className="h-4 w-4" />
+                                                </Button>
+                                            </Link>
+                                        )}
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(c)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(c.id, c._count.orders)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         )) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                                <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
                                     Chưa có dữ liệu
                                 </TableCell>
                             </TableRow>
@@ -174,6 +225,21 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
                                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 className="col-span-3"
                             />
+                        </div>
+                        <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
+                            <Label className="text-left md:text-right">Loại khách</Label>
+                            <Select
+                                value={formData.customerType}
+                                onValueChange={(v) => setFormData({ ...formData, customerType: v as "retail" | "wholesale" })}
+                            >
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="retail">Khách lẻ</SelectItem>
+                                    <SelectItem value="wholesale">Khách sỉ</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="flex flex-col md:grid md:grid-cols-4 gap-2 md:gap-4 md:items-center">
                             <Label className="text-left md:text-right">SĐT</Label>

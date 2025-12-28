@@ -14,7 +14,7 @@ export async function getCustomers() {
     });
 }
 
-export async function createCustomer(data: { name: string; phone?: string; address?: string }) {
+export async function createCustomer(data: { name: string; phone?: string; address?: string; customerType?: string }) {
     try {
         if (!data.name) return { success: false, error: "Name is required" };
 
@@ -23,6 +23,7 @@ export async function createCustomer(data: { name: string; phone?: string; addre
                 name: data.name,
                 phone: data.phone,
                 address: data.address,
+                customerType: data.customerType || "retail",
             }
         });
 
@@ -34,7 +35,7 @@ export async function createCustomer(data: { name: string; phone?: string; addre
     }
 }
 
-export async function updateCustomer(id: string, data: { name: string; phone?: string; address?: string }) {
+export async function updateCustomer(id: string, data: { name: string; phone?: string; address?: string; customerType?: string }) {
     try {
         const customer = await db.customer.update({
             where: { id },
@@ -42,6 +43,7 @@ export async function updateCustomer(id: string, data: { name: string; phone?: s
                 name: data.name,
                 phone: data.phone,
                 address: data.address,
+                customerType: data.customerType || "retail",
             }
         });
 

@@ -11,6 +11,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User model for authentication
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String   // hashed with bcrypt
+  name      String
+  role      String   @default("staff") // "admin", "staff"
+  createdAt DateTime @default(now())
+}
 
 model Category {
   id        String   @id @default(uuid())
@@ -37,18 +46,37 @@ model Product {
 
   orderItems OrderItem[]
   inventoryTransactions InventoryTransaction[]
+  wholesalePrices WholesalePrice[]
 }
 
 model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String?
-  address   String?
-  debt      Float    @default(0)
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  phone        String?
+  address      String?
+  debt         Float    @default(0)
+  customerType String   @default("retail") // "retail" or "wholesale"
+  createdAt    DateTime @default(now())
   
   orders    Order[]
   transactions Transaction[]
+  wholesalePrices WholesalePrice[]
+}
+
+// Wholesale pricing per customer per product with expiration
+model WholesalePrice {
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  price      Float
+  validFrom  DateTime @default(now())
+  validTo    DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([customerId, productId]) // One price per product per customer
 }
 
 model Supplier {

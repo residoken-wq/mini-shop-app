@@ -2,17 +2,70 @@
 
 import { MainNav } from "@/components/main-nav";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Store } from "lucide-react";
+import { Menu, Store, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { getCurrentUser, logout, ensureAdminUser, type SessionUser } from "@/lib/auth";
 
 interface AppShellProps {
     children: React.ReactNode;
 }
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = ["/login", "/portal"];
+
 export function AppShell({ children }: AppShellProps) {
     const [open, setOpen] = useState(false);
+    const [user, setUser] = useState<SessionUser | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            // Ensure admin user exists
+            await ensureAdminUser();
+
+            const currentUser = await getCurrentUser();
+            setUser(currentUser);
+            setIsLoading(false);
+
+            // Redirect to login if not authenticated and not on public route
+            const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+            if (!currentUser && !isPublicRoute) {
+                router.push("/login");
+            }
+        };
+        checkAuth();
+    }, [pathname, router]);
+
+    const handleLogout = async () => {
+        await logout();
+        setUser(null);
+        router.push("/login");
+    };
+
+    // Show nothing while checking auth
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+            </div>
+        );
+    }
+
+    // For login and portal pages, just render children without shell
+    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+    if (isPublicRoute) {
+        return <>{children}</>;
+    }
+
+    // If not logged in and not on public route, show nothing (redirect will happen)
+    if (!user) {
+        return null;
+    }
 
     return (
         <div className="flex min-h-screen flex-col lg:flex-row">
@@ -33,12 +86,28 @@ export function AppShell({ children }: AppShellProps) {
                             </Link>
                             <div className="my-2 border-b" />
                             <MainNav setOpen={setOpen} />
+                            <div className="mt-auto pt-4 border-t">
+                                <div className="text-sm text-muted-foreground mb-2">
+                                    Xin chào, {user.name}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    onClick={() => { handleLogout(); setOpen(false); }}
+                                >
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Đăng xuất
+                                </Button>
+                            </div>
                         </nav>
                     </SheetContent>
                 </Sheet>
                 <div className="flex-1 font-semibold text-lg">Mini Shop</div>
                 <div className="flex items-center gap-2">
-                    {/* Right side of header (e.g. User Profile or Voice Input Placeholder) */}
+                    <span className="text-sm text-muted-foreground hidden sm:inline">{user.name}</span>
+                    <Button variant="ghost" size="icon" onClick={handleLogout} title="Đăng xuất">
+                        <LogOut className="h-5 w-5" />
+                    </Button>
                 </div>
             </header>
 
@@ -52,6 +121,20 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
                 <div className="flex-1 overflow-auto py-4 px-4">
                     <MainNav />
+                </div>
+                {/* User Info & Logout */}
+                <div className="p-4 border-t">
+                    <div className="text-sm text-muted-foreground mb-2">
+                        Xin chào, <strong>{user.name}</strong>
+                    </div>
+                    <Button
+                        variant="outline"
+                        className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={handleLogout}
+                    >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Đăng xuất
+                    </Button>
                 </div>
             </aside>
 
