@@ -134,6 +134,8 @@ export async function submitPortalOrder(data: {
     recipientName?: string;
     recipientPhone?: string;
     deliveryAddress?: string;
+    // Payment method: "QR", "COD", "CREDIT"
+    paymentMethod?: string;
     items: { productId: string; quantity: number; price: number }[];
 }) {
     try {
@@ -151,6 +153,12 @@ export async function submitPortalOrder(data: {
         }
         if (!data.deliveryAddress?.trim()) {
             return { success: false, error: "Vui lòng nhập địa chỉ giao hàng" };
+        }
+
+        // Validate payment method
+        const paymentMethod = data.paymentMethod || "COD";
+        if (paymentMethod === "CREDIT" && data.customerType !== "wholesale") {
+            return { success: false, error: "Công nợ chỉ dành cho khách sỉ" };
         }
 
         // Check for expired prices (price = 0)
@@ -188,6 +196,7 @@ export async function submitPortalOrder(data: {
                 recipientName: data.recipientName,
                 recipientPhone: data.recipientPhone,
                 deliveryAddress: data.deliveryAddress,
+                paymentMethod: paymentMethod,
                 items: {
                     create: data.items.map(item => ({
                         productId: item.productId,
@@ -209,11 +218,33 @@ export async function submitPortalOrder(data: {
             success: true,
             order,
             orderCode,
-            total
+            total,
+            paymentMethod
         };
     } catch (error) {
         console.error("Submit portal order error:", error);
         return { success: false, error: "Đã xảy ra lỗi khi tạo đơn hàng" };
+    }
+}
+
+// Get shop bank info for QR payment
+export async function getShopBankInfo() {
+    try {
+        const settings = await db.shopSettings.findFirst();
+        if (!settings) {
+            return { success: false, error: "Chưa cấu hình thông tin cửa hàng" };
+        }
+        return {
+            success: true,
+            bankInfo: {
+                bankName: settings.bankName,
+                bankAccount: settings.bankAccount,
+                bankOwner: settings.bankOwner
+            }
+        };
+    } catch (error) {
+        console.error("Get bank info error:", error);
+        return { success: false, error: "Lỗi lấy thông tin ngân hàng" };
     }
 }
 

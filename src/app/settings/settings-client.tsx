@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Store, Phone, MapPin, Mail, Save, Check } from "lucide-react";
+import { Store, Phone, MapPin, Mail, Save, Check, CreditCard, Building2, User } from "lucide-react";
 import { updateShopSettings } from "./actions";
 
 interface SettingsClientProps {
@@ -24,7 +24,10 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
             name: settings.name,
             phone: settings.phone,
             address: settings.address,
-            email: settings.email
+            email: settings.email,
+            bankName: settings.bankName,
+            bankAccount: settings.bankAccount,
+            bankOwner: settings.bankOwner
         });
 
         if (res.success) {
@@ -34,6 +37,34 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
             alert("Lỗi: " + res.error);
         }
         setIsSaving(false);
+    };
+
+    // Generate VietQR URL for bank transfer
+    const getVietQRUrl = () => {
+        if (!settings.bankAccount || !settings.bankName) return null;
+        // VietQR format: https://img.vietqr.io/image/{bank}-{account}-compact.png
+        const bankCodes: Record<string, string> = {
+            'Vietcombank': 'VCB',
+            'VCB': 'VCB',
+            'Techcombank': 'TCB',
+            'TCB': 'TCB',
+            'MB Bank': 'MB',
+            'MB': 'MB',
+            'BIDV': 'BIDV',
+            'Agribank': 'VBA',
+            'VBA': 'VBA',
+            'ACB': 'ACB',
+            'VPBank': 'VPB',
+            'VPB': 'VPB',
+            'Sacombank': 'STB',
+            'STB': 'STB',
+            'TPBank': 'TPB',
+            'TPB': 'TPB',
+            'Vietinbank': 'CTG',
+            'CTG': 'CTG',
+        };
+        const bankCode = bankCodes[settings.bankName] || settings.bankName.toUpperCase();
+        return `https://img.vietqr.io/image/${bankCode}-${settings.bankAccount}-compact2.png?accountName=${encodeURIComponent(settings.bankOwner)}`;
     };
 
     return (
@@ -107,6 +138,80 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
                         />
                     </div>
                 </CardContent>
+            </Card>
+
+            {/* Bank Account Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="h-5 w-5" />
+                        Thông tin ngân hàng
+                    </CardTitle>
+                    <CardDescription>
+                        Thông tin tài khoản để nhận thanh toán chuyển khoản
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="bankName" className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Tên ngân hàng
+                        </Label>
+                        <Input
+                            id="bankName"
+                            value={settings.bankName}
+                            onChange={e => setSettings({ ...settings, bankName: e.target.value })}
+                            placeholder="VD: Vietcombank, MB Bank, Techcombank..."
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="bankAccount" className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4" />
+                            Số tài khoản
+                        </Label>
+                        <Input
+                            id="bankAccount"
+                            value={settings.bankAccount}
+                            onChange={e => setSettings({ ...settings, bankAccount: e.target.value })}
+                            placeholder="VD: 1234567890"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="bankOwner" className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            Chủ tài khoản
+                        </Label>
+                        <Input
+                            id="bankOwner"
+                            value={settings.bankOwner}
+                            onChange={e => setSettings({ ...settings, bankOwner: e.target.value.toUpperCase() })}
+                            placeholder="VD: NGUYEN VAN A"
+                        />
+                    </div>
+
+                    {/* QR Code Preview */}
+                    {settings.bankName && settings.bankAccount && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm font-medium text-gray-700 mb-3">Xem trước QR Code:</p>
+                            <div className="flex justify-center">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={getVietQRUrl() || ''}
+                                    alt="QR Code"
+                                    className="w-48 h-48 rounded-lg border shadow-sm"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500 text-center mt-2">
+                                Khách hàng quét mã này để chuyển khoản
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
                 <CardFooter>
                     <Button onClick={handleSave} disabled={isSaving} className="w-full md:w-auto">
                         {saved ? (
@@ -138,9 +243,18 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
                         {settings.address && <p className="text-sm text-muted-foreground">{settings.address}</p>}
                         {settings.phone && <p className="text-sm text-muted-foreground">ĐT: {settings.phone}</p>}
                         {settings.email && <p className="text-sm text-muted-foreground">{settings.email}</p>}
+                        {settings.bankAccount && (
+                            <div className="pt-2 mt-2 border-t">
+                                <p className="text-sm text-muted-foreground">
+                                    {settings.bankName} - {settings.bankAccount}
+                                </p>
+                                <p className="text-sm font-medium">{settings.bankOwner}</p>
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>
         </div>
     );
 }
+

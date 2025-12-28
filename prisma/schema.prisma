@@ -106,6 +106,9 @@ model Order {
   recipientPhone   String?
   deliveryAddress  String?
 
+  // Payment method: "QR", "COD", "CREDIT"
+  paymentMethod    String   @default("COD")
+
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
 
@@ -155,5 +158,9 @@ model ShopSettings {
   phone       String   @default("")
   address     String   @default("")
   email       String   @default("")
+  // Bank account info
+  bankName    String   @default("")
+  bankAccount String   @default("")
+  bankOwner   String   @default("")
   updatedAt   DateTime @updatedAt
 }

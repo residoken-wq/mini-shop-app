@@ -18,9 +18,12 @@ import {
     ArrowRight,
     ArrowLeft,
     Clock,
-    FileText
+    FileText,
+    CreditCard,
+    Banknote,
+    QrCode
 } from "lucide-react";
-import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders } from "./actions";
+import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders, getShopBankInfo } from "./actions";
 
 interface Product {
     id: string;
@@ -65,6 +68,15 @@ export default function PortalPage() {
         orderCode?: string;
         total?: number;
         error?: string;
+        paymentMethod?: string;
+    } | null>(null);
+
+    // Payment method state
+    const [paymentMethod, setPaymentMethod] = useState<"COD" | "QR" | "CREDIT">("COD");
+    const [bankInfo, setBankInfo] = useState<{
+        bankName: string;
+        bankAccount: string;
+        bankOwner: string;
     } | null>(null);
 
     // Pending orders for wholesale customers
@@ -93,6 +105,17 @@ export default function PortalPage() {
             loadProducts();
         }
     }, [step, loadProducts]);
+
+    // Load bank info when step 3 is reached
+    useEffect(() => {
+        if (step === 3) {
+            getShopBankInfo().then(res => {
+                if (res.success && res.bankInfo) {
+                    setBankInfo(res.bankInfo);
+                }
+            });
+        }
+    }, [step]);
 
     const handleSelectRetail = () => {
         setCustomerType("retail");
@@ -196,6 +219,7 @@ export default function PortalPage() {
                 recipientName,
                 recipientPhone,
                 deliveryAddress,
+                paymentMethod,
                 items: cart.map(item => ({
                     productId: item.product.id,
                     quantity: item.quantity,
@@ -763,6 +787,98 @@ export default function PortalPage() {
                                 {formatCurrency(getCartTotal())}đ
                             </span>
                         </div>
+                    </div>
+
+                    {/* Payment Method Selection */}
+                    <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+                        <div className="flex items-center gap-2 text-gray-700 mb-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <CreditCard className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <h3 className="font-semibold">Phương thức thanh toán</h3>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3">
+                            {/* COD Option */}
+                            <div
+                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all text-center ${paymentMethod === "COD"
+                                        ? "border-green-500 bg-green-50"
+                                        : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                                onClick={() => setPaymentMethod("COD")}
+                            >
+                                <Banknote className={`w-8 h-8 mx-auto mb-2 ${paymentMethod === "COD" ? "text-green-600" : "text-gray-400"}`} />
+                                <p className="font-medium text-sm">Tiền mặt</p>
+                                <p className="text-xs text-gray-500">COD</p>
+                            </div>
+
+                            {/* QR Transfer Option */}
+                            <div
+                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all text-center ${paymentMethod === "QR"
+                                        ? "border-blue-500 bg-blue-50"
+                                        : "border-gray-200 hover:border-gray-300"
+                                    }`}
+                                onClick={() => setPaymentMethod("QR")}
+                            >
+                                <QrCode className={`w-8 h-8 mx-auto mb-2 ${paymentMethod === "QR" ? "text-blue-600" : "text-gray-400"}`} />
+                                <p className="font-medium text-sm">Chuyển khoản</p>
+                                <p className="text-xs text-gray-500">QR Code</p>
+                            </div>
+
+                            {/* Credit Option - Only for wholesale */}
+                            <div
+                                className={`p-4 rounded-xl border-2 transition-all text-center ${customerType !== "wholesale"
+                                        ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                                        : paymentMethod === "CREDIT"
+                                            ? "border-purple-500 bg-purple-50 cursor-pointer"
+                                            : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                                    }`}
+                                onClick={() => customerType === "wholesale" && setPaymentMethod("CREDIT")}
+                            >
+                                <FileText className={`w-8 h-8 mx-auto mb-2 ${paymentMethod === "CREDIT" ? "text-purple-600" : "text-gray-400"}`} />
+                                <p className="font-medium text-sm">Công nợ</p>
+                                <p className="text-xs text-gray-500">{customerType === "wholesale" ? "Khách sỉ" : "Chỉ sỉ"}</p>
+                            </div>
+                        </div>
+
+                        {/* QR Code Display */}
+                        {paymentMethod === "QR" && bankInfo && bankInfo.bankAccount && (
+                            <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                                <div className="text-center">
+                                    <p className="text-sm font-medium text-blue-700 mb-3">Quét mã để chuyển khoản</p>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={`https://img.vietqr.io/image/${bankInfo.bankName}-${bankInfo.bankAccount}-compact2.png?amount=${getCartTotal()}&addInfo=${encodeURIComponent(`Thanh toan don hang`)}&accountName=${encodeURIComponent(bankInfo.bankOwner)}`}
+                                        alt="QR Code"
+                                        className="w-48 h-48 mx-auto rounded-lg border shadow-sm bg-white"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                        }}
+                                    />
+                                    <div className="mt-3 text-sm text-gray-600 space-y-1">
+                                        <p><strong>Ngân hàng:</strong> {bankInfo.bankName}</p>
+                                        <p><strong>Số TK:</strong> {bankInfo.bankAccount}</p>
+                                        <p><strong>Chủ TK:</strong> {bankInfo.bankOwner}</p>
+                                        <p className="text-purple-600 font-bold">Số tiền: {formatCurrency(getCartTotal())}đ</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {paymentMethod === "QR" && (!bankInfo || !bankInfo.bankAccount) && (
+                            <div className="mt-4 p-4 bg-yellow-50 rounded-xl border border-yellow-200 text-center">
+                                <AlertCircle className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
+                                <p className="text-sm text-yellow-700">Cửa hàng chưa cấu hình thông tin ngân hàng</p>
+                            </div>
+                        )}
+
+                        {paymentMethod === "CREDIT" && (
+                            <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200 text-center">
+                                <p className="text-sm text-purple-700">
+                                    💳 Đơn hàng sẽ được ghi vào công nợ của khách hàng <strong>{customer?.name}</strong>
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Submit Button */}
