@@ -571,128 +571,195 @@ export default function PortalPage() {
 
             {/* Step 3: Confirmation */}
             {step === 3 && !orderResult?.success && (
-                <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold">Xác nhận đơn hàng</h2>
-                        <Button variant="ghost" size="sm" onClick={() => setStep(2)}>
-                            <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-                        </Button>
-                    </div>
+                <div className="space-y-4">
+                    {/* Header Card */}
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-500 rounded-xl p-6 text-white">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-2xl font-bold">Xác nhận đơn hàng</h2>
+                                <p className="text-white/80 text-sm mt-1">
+                                    Kiểm tra thông tin và gửi đơn hàng
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setStep(2)}
+                                className="text-white hover:bg-white/20"
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+                            </Button>
+                        </div>
 
-                    {/* Customer Info */}
-                    <div className="p-3 bg-gray-50 rounded-lg flex items-center gap-3">
-                        {customerType === "wholesale" ? (
-                            <Users className="w-5 h-5 text-purple-600" />
-                        ) : (
-                            <User className="w-5 h-5 text-blue-600" />
-                        )}
-                        <span className="font-medium">{customer?.name || "Khách lẻ"}</span>
-                        {customerType === "wholesale" && (
-                            <Badge className="bg-purple-100 text-purple-800">Sỉ</Badge>
-                        )}
+                        {/* Customer Badge */}
+                        <div className="mt-4 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-2">
+                            {customerType === "wholesale" ? (
+                                <Users className="w-4 h-4" />
+                            ) : (
+                                <User className="w-4 h-4" />
+                            )}
+                            <span className="font-medium">{customer?.name || "Khách lẻ"}</span>
+                            {customerType === "wholesale" && (
+                                <span className="bg-white/30 text-xs px-2 py-0.5 rounded-full">Giá sỉ</span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Delivery Info Form */}
-                    <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-                        <h3 className="font-semibold text-gray-700">Thông tin giao hàng</h3>
-                        <div>
-                            <label className="text-sm text-gray-600 block mb-1">
-                                Tên người nhận *
-                            </label>
-                            <Input
-                                value={recipientName}
-                                onChange={(e) => setRecipientName(e.target.value)}
-                                placeholder="Nhập tên người nhận hàng"
-                            />
+                    <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+                        <div className="flex items-center gap-2 text-gray-700 mb-2">
+                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                                <ArrowRight className="w-4 h-4 text-purple-600 rotate-90" />
+                            </div>
+                            <h3 className="font-semibold">Thông tin giao hàng</h3>
                         </div>
-                        <div>
-                            <label className="text-sm text-gray-600 block mb-1">
-                                Số điện thoại giao hàng *
-                            </label>
-                            <Input
-                                type="tel"
-                                value={recipientPhone}
-                                onChange={(e) => setRecipientPhone(e.target.value)}
-                                placeholder="Nhập số điện thoại"
-                            />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                                    <User className="w-4 h-4" /> Tên người nhận *
+                                </label>
+                                <Input
+                                    value={recipientName}
+                                    onChange={(e) => setRecipientName(e.target.value)}
+                                    placeholder="Nhập tên người nhận hàng"
+                                    className="h-11 border-gray-200"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                                    <Phone className="w-4 h-4" /> Số điện thoại *
+                                </label>
+                                <Input
+                                    type="tel"
+                                    value={recipientPhone}
+                                    onChange={(e) => setRecipientPhone(e.target.value)}
+                                    placeholder="Nhập số điện thoại giao hàng"
+                                    className="h-11 border-gray-200"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className="text-sm text-gray-600 block mb-1">
-                                Địa chỉ giao hàng *
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                                📍 Địa chỉ giao hàng *
                             </label>
                             <Input
                                 value={deliveryAddress}
                                 onChange={(e) => setDeliveryAddress(e.target.value)}
                                 placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                                className="h-11 border-gray-200"
                             />
                         </div>
                     </div>
 
-                    {/* Cart Items with editable quantity */}
-                    <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-700">Sản phẩm ({cart.length})</h3>
-                        {cart.map(item => (
-                            <div
-                                key={item.product.id}
-                                className="flex items-center gap-4 p-3 border rounded-lg"
-                            >
-                                <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center text-2xl">
-                                    🥬
+                    {/* Product List */}
+                    <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-gray-700">
+                                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                    <ShoppingCart className="w-4 h-4 text-green-600" />
                                 </div>
-                                <div className="flex-1">
-                                    <h4 className="font-medium">{item.product.name}</h4>
-                                    <p className="text-sm text-gray-500">
-                                        {formatCurrency(item.product.displayPrice)}đ/{item.product.unit}
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => updateQuantity(item.product.id, -0.5)}
-                                    >
-                                        <Minus className="w-3 h-3" />
-                                    </Button>
-                                    <Input
-                                        type="number"
-                                        step="0.1"
-                                        min="0"
-                                        value={item.quantity}
-                                        onChange={(e) => setQuantity(item.product.id, parseFloat(e.target.value) || 0)}
-                                        className="w-16 text-center h-8 px-1"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={() => updateQuantity(item.product.id, 0.5)}
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                    </Button>
-                                </div>
-                                <div className="text-right min-w-[80px]">
-                                    <p className="font-bold">
-                                        {formatCurrency(item.product.displayPrice * item.quantity)}đ
-                                    </p>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-red-500 p-0 h-auto"
-                                        onClick={() => removeFromCart(item.product.id)}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                </div>
+                                <h3 className="font-semibold">Sản phẩm ({cart.length})</h3>
                             </div>
-                        ))}
+                            <span className="text-sm text-gray-500">
+                                {cart.reduce((sum, item) => sum + item.quantity, 0)} đơn vị
+                            </span>
+                        </div>
+
+                        <div className="space-y-3">
+                            {cart.map(item => (
+                                <div
+                                    key={item.product.id}
+                                    className="p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-purple-200 transition-colors"
+                                >
+                                    {/* Top row: Image + Name + Delete */}
+                                    <div className="flex items-start gap-3">
+                                        {/* Product Image */}
+                                        <div className="w-12 h-12 bg-gradient-to-br from-green-50 to-green-100 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                                            {item.product.imageUrl ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img
+                                                    src={item.product.imageUrl}
+                                                    alt={item.product.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="text-xl">🥬</span>
+                                            )}
+                                        </div>
+
+                                        {/* Product Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-medium text-gray-900 text-sm leading-tight">{item.product.name}</h4>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                {formatCurrency(item.product.displayPrice)}đ/{item.product.unit}
+                                            </p>
+                                        </div>
+
+                                        {/* Delete Button */}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                                            onClick={() => removeFromCart(item.product.id)}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+
+                                    {/* Bottom row: Quantity + Price */}
+                                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                                        {/* Quantity Controls */}
+                                        <div className="flex items-center gap-1 bg-white rounded-full border p-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-full hover:bg-gray-100"
+                                                onClick={() => updateQuantity(item.product.id, -0.5)}
+                                            >
+                                                <Minus className="w-4 h-4" />
+                                            </Button>
+                                            <Input
+                                                type="number"
+                                                step="0.1"
+                                                min="0"
+                                                value={item.quantity}
+                                                onChange={(e) => setQuantity(item.product.id, parseFloat(e.target.value) || 0)}
+                                                className="w-16 text-center h-8 border-0 px-1 bg-transparent font-bold text-base"
+                                            />
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-full hover:bg-gray-100"
+                                                onClick={() => updateQuantity(item.product.id, 0.5)}
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+
+                                        {/* Total Price */}
+                                        <p className="font-bold text-lg text-purple-600">
+                                            {formatCurrency(item.product.displayPrice * item.quantity)}đ
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Total */}
-                    <div className="border-t pt-4">
-                        <div className="flex justify-between items-center text-lg">
-                            <span className="font-medium">Tổng cộng:</span>
-                            <span className="font-bold text-xl text-purple-600">
+                    {/* Total & Submit */}
+                    <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+                        <div className="flex justify-between items-center py-3 border-b">
+                            <span className="text-gray-600">Tổng sản phẩm</span>
+                            <span className="font-medium">{cart.length} loại</span>
+                        </div>
+                        <div className="flex justify-between items-center py-3 border-b">
+                            <span className="text-gray-600">Tổng số lượng</span>
+                            <span className="font-medium">{cart.reduce((sum, item) => sum + item.quantity, 0)} đơn vị</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2">
+                            <span className="text-lg font-semibold">Tổng cộng</span>
+                            <span className="text-2xl font-bold text-purple-600">
                                 {formatCurrency(getCartTotal())}đ
                             </span>
                         </div>
