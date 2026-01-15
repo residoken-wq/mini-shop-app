@@ -10,26 +10,34 @@
 export function getImageUrl(url: string | null | undefined): string {
     if (!url) return "";
 
-    // Check if it's a Google Drive link
+    let fileId: string | null = null;
+
+    // Check if it's a Google Drive link - file/d/ format
     const driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (driveFileMatch) {
-        const fileId = driveFileMatch[1];
-        // Use Google Drive direct link format
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        fileId = driveFileMatch[1];
     }
 
     // Check for open?id= format
-    const openIdMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-    if (openIdMatch) {
-        const fileId = openIdMatch[1];
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    if (!fileId) {
+        const openIdMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+        if (openIdMatch) {
+            fileId = openIdMatch[1];
+        }
     }
 
-    // Check for uc?id= format (already correct, but normalize)
-    const ucIdMatch = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/);
-    if (ucIdMatch) {
-        const fileId = ucIdMatch[1];
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    // Check for uc?id= format
+    if (!fileId) {
+        const ucIdMatch = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/);
+        if (ucIdMatch) {
+            fileId = ucIdMatch[1];
+        }
+    }
+
+    if (fileId) {
+        // Use lh3.googleusercontent.com thumbnail format - more reliable for cross-origin
+        // This works with publicly shared files
+        return `https://lh3.googleusercontent.com/d/${fileId}=w500`;
     }
 
     // Return original URL for non-Google Drive links
