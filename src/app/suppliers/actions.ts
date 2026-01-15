@@ -154,3 +154,58 @@ export async function createPurchaseOrder(data: {
         return { success: false, error: "Failed to create purchase order" };
     }
 }
+
+// Get purchase orders with optional supplier filter
+export async function getPurchaseOrders(supplierId?: string) {
+    return await db.order.findMany({
+        where: {
+            type: "PURCHASE",
+            ...(supplierId ? { supplierId } : {})
+        },
+        include: {
+            supplier: true,
+            items: {
+                include: {
+                    product: true
+                }
+            }
+        },
+        orderBy: { createdAt: "desc" }
+    });
+}
+
+// Pay supplier debt
+export async function paySupplierDebt(data: {
+    supplierId: string;
+    amount: number;
+    note?: string;
+}) {
+    try {
+        const { supplierId, amount, note } = data;
+
+        await db.$transaction(async (tx) => {
+            // Decrease supplier debt
+            await tx.supplier.update({
+                where: { id: supplierId },
+                data: { debt: { decrement: amount } }
+            });
+
+            // Create transaction record
+            await tx.transaction.create({
+                data: {
+                    type: "DEBT_PAYMENT",
+                    amount: amount,
+                    description: note || "Trả nợ NCC",
+                    supplierId: supplierId
+                }
+            });
+        });
+
+        revalidatePath("/suppliers");
+        revalidatePath("/finance");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to pay supplier debt:", error);
+        return { success: false, error: "Failed to pay supplier debt" };
+    }
+}

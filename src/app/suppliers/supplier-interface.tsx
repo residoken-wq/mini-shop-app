@@ -100,9 +100,16 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
 
     const handleCheckout = async () => {
         if (cart.length === 0) return;
-        setIsCheckoutLoading(true);
 
         const paid = amountPaid ? parseFloat(amountPaid) : cartTotal;
+
+        // Validation: Require supplier when not paying in full
+        if (paid < cartTotal && !selectedSupplier) {
+            alert("Vui lòng chọn nhà cung cấp khi mua chịu (không trả đủ tiền)!");
+            return;
+        }
+
+        setIsCheckoutLoading(true);
 
         const result = await createPurchaseOrder({
             supplierId: selectedSupplier?.id,
@@ -122,7 +129,12 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
             setCart([]);
             setSelectedSupplier(null);
             setAmountPaid("");
-            alert("Đơn nhập hàng thành công!");
+            const debtAmount = cartTotal - paid;
+            if (debtAmount > 0 && selectedSupplier) {
+                alert(`Đơn nhập hàng thành công!\nCông nợ NCC tăng: ${new Intl.NumberFormat('vi-VN').format(debtAmount)}đ`);
+            } else {
+                alert("Đơn nhập hàng thành công!");
+            }
         } else {
             alert("Lỗi: " + result.error);
         }
