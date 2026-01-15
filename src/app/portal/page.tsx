@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders, getShopBankInfo } from "./actions";
 import OrderTracking from "./order-tracking";
+import { getImageUrl } from "@/lib/image-utils";
 
 interface Product {
     id: string;
@@ -492,7 +493,7 @@ export default function PortalPage() {
                                                             {product.imageUrl ? (
                                                                 // eslint-disable-next-line @next/next/no-img-element
                                                                 <img
-                                                                    src={product.imageUrl}
+                                                                    src={getImageUrl(product.imageUrl)}
                                                                     alt={product.name}
                                                                     className="w-full h-full object-cover"
                                                                     onError={(e) => {
@@ -628,7 +629,7 @@ export default function PortalPage() {
                                                             {product.imageUrl ? (
                                                                 // eslint-disable-next-line @next/next/no-img-element
                                                                 <img
-                                                                    src={product.imageUrl}
+                                                                    src={getImageUrl(product.imageUrl)}
                                                                     alt={product.name}
                                                                     className="w-full h-full object-cover"
                                                                     onError={(e) => {
@@ -835,7 +836,7 @@ export default function PortalPage() {
                                             {item.product.imageUrl ? (
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img
-                                                    src={item.product.imageUrl}
+                                                    src={getImageUrl(item.product.imageUrl)}
                                                     alt={item.product.name}
                                                     className="w-full h-full object-cover"
                                                 />

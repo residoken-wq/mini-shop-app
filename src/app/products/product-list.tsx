@@ -16,6 +16,7 @@ import { createProduct, updateProduct, deleteProduct, adjustStock, getInventoryH
 import { cn } from "@/lib/utils";
 import { MarketProduct } from "@/lib/market-types";
 import * as XLSX from "xlsx";
+import { getImageUrl } from "@/lib/image-utils";
 
 // Extend Product to include Category relation if needed, or just use basic type
 type ProductWithCategory = Product & { category?: Category | null };
@@ -597,7 +598,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                     <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
-                                            src={newProduct.imageUrl}
+                                            src={getImageUrl(newProduct.imageUrl)}
                                             alt="Preview"
                                             className="w-16 h-16 object-cover rounded-lg border shadow-sm"
                                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
