@@ -52,10 +52,29 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 <div className="border-b border-dashed border-gray-200 pb-3 mb-3">
                     <p className="text-sm">
                         <span className="text-gray-500">Khách hàng:</span>{" "}
-                        <span className="font-medium">{order.customer?.name || "Khách lẻ"}</span>
+                        <span className="font-medium">
+                            {order.recipientName || order.customer?.name || "Khách lẻ"}
+                        </span>
                     </p>
-                    {order.customer?.phone && (
-                        <p className="text-sm text-gray-500">ĐT: {order.customer.phone}</p>
+                    {(order.recipientPhone || order.customer?.phone) && (
+                        <p className="text-sm text-gray-500">
+                            ĐT: {order.recipientPhone || order.customer?.phone}
+                        </p>
+                    )}
+                    {order.deliveryAddress && (
+                        <p className="text-sm text-gray-500">
+                            Địa chỉ: {order.deliveryAddress}
+                        </p>
+                    )}
+                    {order.paymentMethod && (
+                        <p className="text-sm">
+                            <span className="text-gray-500">Thanh toán:</span>{" "}
+                            <span className="font-medium">
+                                {order.paymentMethod === "COD" ? "💵 Tiền mặt (COD)" :
+                                    order.paymentMethod === "QR" ? "📱 Chuyển khoản" :
+                                        order.paymentMethod === "CREDIT" ? "📋 Công nợ" : order.paymentMethod}
+                            </span>
+                        </p>
                     )}
                 </div>
 
