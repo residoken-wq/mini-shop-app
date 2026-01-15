@@ -171,7 +171,6 @@ export default function OrderTracking() {
                                             {getStatusIcon(order.statusInfo.color)}
                                             <span className="ml-1">{order.statusInfo.label}</span>
                                         </Badge>
-                                        {expandedOrder === order.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                                     </div>
                                 </div>
 
@@ -211,6 +210,26 @@ export default function OrderTracking() {
                                 <div className="mt-3 flex justify-between items-center">
                                     <span className="text-sm text-gray-500">{order.items.length} sản phẩm</span>
                                     <span className="font-bold text-lg text-purple-600">{formatCurrency(order.total)}đ</span>
+                                </div>
+
+                                {/* View Details Button */}
+                                <div className={cn(
+                                    "mt-4 py-3 px-4 -mx-4 -mb-4 flex items-center justify-center gap-2 font-medium transition-all",
+                                    expandedOrder === order.id
+                                        ? "bg-purple-100 text-purple-700"
+                                        : "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600 hover:from-purple-100 hover:to-pink-100"
+                                )}>
+                                    {expandedOrder === order.id ? (
+                                        <>
+                                            <ChevronUp className="w-5 h-5" />
+                                            Thu gọn
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ChevronDown className="w-5 h-5 animate-bounce" />
+                                            Xem chi tiết đơn hàng
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
