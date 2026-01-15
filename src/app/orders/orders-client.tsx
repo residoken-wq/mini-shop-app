@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { deleteOrder } from "./actions";
+import { deleteOrder, updateOrderStatus, ORDER_STATUSES, getAllowedNextStatuses, OrderStatus } from "./actions";
 import { OrderReceipt } from "./order-receipt";
 import html2canvas from "html2canvas";
 
@@ -72,16 +72,33 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
     };
 
     const getStatusBadge = (status: string) => {
-        switch (status) {
-            case "PENDING":
-                return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Chờ xử lý</Badge>;
-            case "COMPLETED":
-                return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Hoàn thành</Badge>;
-            case "CANCELLED":
-                return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Đã hủy</Badge>;
-            default:
-                return <Badge variant="outline">{status}</Badge>;
-        }
+        const statusInfo = ORDER_STATUSES[status as OrderStatus];
+        if (!statusInfo) return <Badge variant="outline">{status}</Badge>;
+
+        const colorClasses: Record<string, string> = {
+            yellow: "bg-yellow-50 text-yellow-700 border-yellow-200",
+            blue: "bg-blue-50 text-blue-700 border-blue-200",
+            purple: "bg-purple-50 text-purple-700 border-purple-200",
+            orange: "bg-orange-50 text-orange-700 border-orange-200",
+            green: "bg-green-50 text-green-700 border-green-200",
+            red: "bg-red-50 text-red-700 border-red-200",
+        };
+
+        const icons: Record<string, React.ReactNode> = {
+            yellow: <Clock className="h-3 w-3 mr-1" />,
+            blue: <Loader2 className="h-3 w-3 mr-1" />,
+            purple: <Package className="h-3 w-3 mr-1" />,
+            orange: <Truck className="h-3 w-3 mr-1" />,
+            green: <CheckCircle className="h-3 w-3 mr-1" />,
+            red: <XCircle className="h-3 w-3 mr-1" />,
+        };
+
+        return (
+            <Badge variant="outline" className={colorClasses[statusInfo.color]}>
+                {icons[statusInfo.color]}
+                {statusInfo.label}
+            </Badge>
+        );
     };
 
     const getTypeBadge = (type: string) => {
@@ -228,10 +245,81 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                     <DialogHeader className="shrink-0">
                         <DialogTitle className="flex items-center justify-between pr-8">
                             <span>Chi tiết đơn hàng #{selectedOrder?.code}</span>
+                            {selectedOrder && getStatusBadge(selectedOrder.status)}
                         </DialogTitle>
                     </DialogHeader>
                     {selectedOrder && (
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-y-auto space-y-4">
+                            {/* Status Progress - Only for SALE orders */}
+                            {selectedOrder.type === "SALE" && (
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <p className="text-sm font-medium text-gray-600 mb-3">Tiến trình xử lý</p>
+                                    <div className="flex items-center justify-between">
+                                        {(["PENDING", "PROCESSING", "READY", "SHIPPING", "COMPLETED"] as const).map((status, idx) => {
+                                            const statusInfo = ORDER_STATUSES[status];
+                                            const currentStep = ORDER_STATUSES[selectedOrder.status as OrderStatus]?.step || 0;
+                                            const isActive = statusInfo.step <= currentStep;
+                                            const isCurrent = selectedOrder.status === status;
+                                            const isCancelled = selectedOrder.status === "CANCELLED";
+
+                                            return (
+                                                <div key={status} className="flex items-center">
+                                                    <div className={cn(
+                                                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all",
+                                                        isCancelled ? "bg-gray-200 text-gray-400" :
+                                                            isCurrent ? "bg-purple-500 text-white ring-4 ring-purple-200" :
+                                                                isActive ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
+                                                    )}>
+                                                        {isActive && !isCancelled ? <CheckCircle className="w-4 h-4" /> : idx + 1}
+                                                    </div>
+                                                    {idx < 4 && (
+                                                        <div className={cn(
+                                                            "w-8 md:w-12 h-1 mx-1",
+                                                            !isCancelled && statusInfo.step < currentStep ? "bg-green-500" : "bg-gray-200"
+                                                        )} />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex justify-between mt-2 text-[10px] md:text-xs text-gray-500">
+                                        <span>Chờ</span>
+                                        <span>Xử lý</span>
+                                        <span>Đủ hàng</span>
+                                        <span>Giao</span>
+                                        <span>Xong</span>
+                                    </div>
+
+                                    {/* Status Change Buttons */}
+                                    {selectedOrder.status !== "COMPLETED" && selectedOrder.status !== "CANCELLED" && (
+                                        <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
+                                            <span className="text-sm text-gray-500 mr-2">Chuyển sang:</span>
+                                            {getAllowedNextStatuses(selectedOrder.status).map(nextStatus => (
+                                                <Button
+                                                    key={nextStatus}
+                                                    size="sm"
+                                                    variant={nextStatus === "CANCELLED" ? "destructive" : "default"}
+                                                    onClick={async () => {
+                                                        const result = await updateOrderStatus(selectedOrder.id, nextStatus);
+                                                        if (result.success) {
+                                                            setOrders(prev => prev.map(o =>
+                                                                o.id === selectedOrder.id ? { ...o, status: nextStatus } : o
+                                                            ));
+                                                            setSelectedOrder({ ...selectedOrder, status: nextStatus });
+                                                        } else {
+                                                            alert("Lỗi cập nhật trạng thái");
+                                                        }
+                                                    }}
+                                                >
+                                                    {ORDER_STATUSES[nextStatus].label}
+                                                    <ChevronRight className="w-4 h-4 ml-1" />
+                                                </Button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Print Receipt Preview */}
                             <div className="border rounded-lg overflow-hidden shadow-sm">
                                 <OrderReceipt ref={receiptRef} order={selectedOrder} />

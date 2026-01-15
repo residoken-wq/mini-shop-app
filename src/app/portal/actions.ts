@@ -248,3 +248,71 @@ export async function getShopBankInfo() {
     }
 }
 
+// Order Status Constants (duplicate for Portal use)
+export const ORDER_STATUSES = {
+    PENDING: { label: "Chờ xử lý", color: "yellow", step: 1 },
+    PROCESSING: { label: "Đang xử lý", color: "blue", step: 2 },
+    READY: { label: "Đủ hàng", color: "purple", step: 3 },
+    SHIPPING: { label: "Đang giao", color: "orange", step: 4 },
+    COMPLETED: { label: "Hoàn tất", color: "green", step: 5 },
+    CANCELLED: { label: "Đã hủy", color: "red", step: 0 },
+} as const;
+
+export type OrderStatus = keyof typeof ORDER_STATUSES;
+
+// Track orders by phone number (for customer)
+export async function trackOrdersByPhone(phone: string) {
+    if (!phone || phone.trim().length < 3) {
+        return { success: false, error: "Vui lòng nhập số điện thoại" };
+    }
+
+    const searchPhone = phone.trim();
+
+    // Find orders by recipient phone or customer phone
+    const orders = await db.order.findMany({
+        where: {
+            type: "SALE",
+            OR: [
+                { recipientPhone: { contains: searchPhone } },
+                {
+                    customer: {
+                        OR: [
+                            { phone: { contains: searchPhone } },
+                            { phones: { contains: searchPhone } }
+                        ]
+                    }
+                }
+            ]
+        },
+        include: {
+            customer: true,
+            items: {
+                include: {
+                    product: true
+                }
+            }
+        },
+        orderBy: { createdAt: "desc" }
+    });
+
+    return {
+        success: true,
+        orders: orders.map(order => ({
+            id: order.id,
+            code: order.code,
+            status: order.status,
+            statusInfo: ORDER_STATUSES[order.status as OrderStatus] || ORDER_STATUSES.PENDING,
+            total: order.total,
+            paymentMethod: order.paymentMethod,
+            recipientName: order.recipientName,
+            recipientPhone: order.recipientPhone,
+            deliveryAddress: order.deliveryAddress,
+            createdAt: order.createdAt,
+            items: order.items.map(item => ({
+                name: item.product.name,
+                quantity: item.quantity,
+                price: item.price
+            }))
+        }))
+    };
+}

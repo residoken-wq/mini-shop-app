@@ -21,9 +21,11 @@ import {
     FileText,
     CreditCard,
     Banknote,
-    QrCode
+    QrCode,
+    PackageSearch
 } from "lucide-react";
 import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders, getShopBankInfo } from "./actions";
+import OrderTracking from "./order-tracking";
 
 interface Product {
     id: string;
@@ -45,6 +47,8 @@ interface CartItem {
 }
 
 export default function PortalPage() {
+    // Mode: "order" = ordering flow, "track" = order tracking
+    const [mode, setMode] = useState<"order" | "track">("order");
     // Step: 1 = Customer Type, 2 = Product Selection, 3 = Confirmation
     const [step, setStep] = useState(1);
     const [customerType, setCustomerType] = useState<"retail" | "wholesale" | null>(null);
@@ -251,30 +255,34 @@ export default function PortalPage() {
 
     return (
         <div className="space-y-6">
-            {/* Progress Indicator */}
-            <div className="flex items-center justify-center gap-2">
-                {[1, 2, 3].map((s) => (
-                    <div key={s} className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= s
-                            ? "bg-purple-500 text-white"
-                            : "bg-gray-200 text-gray-500"
-                            }`}>
-                            {s}
-                        </div>
-                        {s < 3 && (
-                            <div className={`w-12 h-1 ${step > s ? "bg-purple-500" : "bg-gray-200"}`} />
-                        )}
+            {/* Progress Indicator - Only show in order mode */}
+            {mode === "order" && (
+                <>
+                    <div className="flex items-center justify-center gap-2">
+                        {[1, 2, 3].map((s) => (
+                            <div key={s} className="flex items-center">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= s
+                                    ? "bg-purple-500 text-white"
+                                    : "bg-gray-200 text-gray-500"
+                                    }`}>
+                                    {s}
+                                </div>
+                                {s < 3 && (
+                                    <div className={`w-12 h-1 ${step > s ? "bg-purple-500" : "bg-gray-200"}`} />
+                                )}
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
-            <div className="flex justify-center gap-8 text-sm text-gray-600">
-                <span>Loại khách</span>
-                <span>Chọn hàng</span>
-                <span>Xác nhận</span>
-            </div>
+                    <div className="flex justify-center gap-8 text-sm text-gray-600">
+                        <span>Loại khách</span>
+                        <span>Chọn hàng</span>
+                        <span>Xác nhận</span>
+                    </div>
+                </>
+            )}
 
             {/* Step 1: Customer Type Selection */}
-            {step === 1 && (
+            {mode === "order" && step === 1 && (
                 <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
                     <h2 className="text-xl font-bold text-center">Bạn là?</h2>
 
@@ -333,6 +341,32 @@ export default function PortalPage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Order Tracking Link */}
+                    <div className="border-t pt-4">
+                        <button
+                            onClick={() => setMode("track")}
+                            className="w-full p-4 border-2 border-dashed rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all flex items-center justify-center gap-3"
+                        >
+                            <PackageSearch className="w-6 h-6 text-purple-600" />
+                            <span className="font-medium text-gray-700">Tra cứu đơn hàng đã đặt</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Order Tracking Mode */}
+            {mode === "track" && (
+                <div className="space-y-4">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setMode("order")}
+                        className="mb-2"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Quay lại đặt hàng
+                    </Button>
+                    <OrderTracking />
                 </div>
             )}
 
@@ -428,9 +462,9 @@ export default function PortalPage() {
                                 const inStockProducts = filteredProducts
                                     .filter(p => p.stock > 0)
                                     .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-                                
+
                                 if (inStockProducts.length === 0) return null;
-                                
+
                                 return (
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 bg-green-50 rounded-lg px-4 py-3 border border-green-200">
@@ -566,9 +600,9 @@ export default function PortalPage() {
                                 const outOfStockProducts = filteredProducts
                                     .filter(p => p.stock <= 0)
                                     .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-                                
+
                                 if (outOfStockProducts.length === 0) return null;
-                                
+
                                 return (
                                     <div className="space-y-4 mt-8">
                                         <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-4 py-3 border border-gray-200">
@@ -900,8 +934,8 @@ export default function PortalPage() {
                             {/* COD Option */}
                             <div
                                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all text-center ${paymentMethod === "COD"
-                                        ? "border-green-500 bg-green-50"
-                                        : "border-gray-200 hover:border-gray-300"
+                                    ? "border-green-500 bg-green-50"
+                                    : "border-gray-200 hover:border-gray-300"
                                     }`}
                                 onClick={() => setPaymentMethod("COD")}
                             >
@@ -913,8 +947,8 @@ export default function PortalPage() {
                             {/* QR Transfer Option */}
                             <div
                                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all text-center ${paymentMethod === "QR"
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-gray-200 hover:border-gray-300"
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "border-gray-200 hover:border-gray-300"
                                     }`}
                                 onClick={() => setPaymentMethod("QR")}
                             >
@@ -926,10 +960,10 @@ export default function PortalPage() {
                             {/* Credit Option - Only for wholesale */}
                             <div
                                 className={`p-4 rounded-xl border-2 transition-all text-center ${customerType !== "wholesale"
-                                        ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
-                                        : paymentMethod === "CREDIT"
-                                            ? "border-purple-500 bg-purple-50 cursor-pointer"
-                                            : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                                    ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                                    : paymentMethod === "CREDIT"
+                                        ? "border-purple-500 bg-purple-50 cursor-pointer"
+                                        : "border-gray-200 hover:border-gray-300 cursor-pointer"
                                     }`}
                                 onClick={() => customerType === "wholesale" && setPaymentMethod("CREDIT")}
                             >
