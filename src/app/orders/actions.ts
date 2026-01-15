@@ -16,7 +16,7 @@ export const ORDER_STATUSES = {
 export type OrderStatus = keyof typeof ORDER_STATUSES;
 
 // Get next status in workflow
-export function getNextStatus(currentStatus: string): OrderStatus | null {
+export async function getNextStatus(currentStatus: string): Promise<OrderStatus | null> {
     const flow: OrderStatus[] = ["PENDING", "PROCESSING", "READY", "SHIPPING", "COMPLETED"];
     const currentIndex = flow.indexOf(currentStatus as OrderStatus);
     if (currentIndex === -1 || currentIndex >= flow.length - 1) return null;
@@ -24,7 +24,7 @@ export function getNextStatus(currentStatus: string): OrderStatus | null {
 }
 
 // Get allowed next statuses for a given status
-export function getAllowedNextStatuses(currentStatus: string): OrderStatus[] {
+export async function getAllowedNextStatuses(currentStatus: string): Promise<OrderStatus[]> {
     switch (currentStatus) {
         case "PENDING":
             return ["PROCESSING", "CANCELLED"];
