@@ -410,155 +410,253 @@ export default function PortalPage() {
                         />
                     </div>
 
-                    {/* Products Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {isLoading ? (
-                            <div className="col-span-full text-center py-12">
-                                <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                                <p className="text-gray-500">Đang tải sản phẩm...</p>
-                            </div>
-                        ) : filteredProducts.length === 0 ? (
-                            <div className="col-span-full text-center py-12 text-gray-500">
-                                <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                <p>Không tìm thấy sản phẩm</p>
-                            </div>
-                        ) : (
-                            filteredProducts.map(product => {
-                                const cartItem = cart.find(item => item.product.id === product.id);
-                                const isOutOfStock = product.stock <= 0;
-                                const isDisabled = product.isExpired || isOutOfStock;
-
+                    {/* Products Grid - Split into 2 sections */}
+                    {isLoading ? (
+                        <div className="text-center py-12">
+                            <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                            <p className="text-gray-500">Đang tải sản phẩm...</p>
+                        </div>
+                    ) : filteredProducts.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">
+                            <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                            <p>Không tìm thấy sản phẩm</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Section 1: In-stock products */}
+                            {(() => {
+                                const inStockProducts = filteredProducts
+                                    .filter(p => p.stock > 0)
+                                    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+                                
+                                if (inStockProducts.length === 0) return null;
+                                
                                 return (
-                                    <div
-                                        key={product.id}
-                                        className={`
-                                            bg-white rounded-xl shadow-sm border overflow-hidden
-                                            transition-all duration-200 hover:shadow-lg hover:scale-[1.02]
-                                            ${isDisabled ? "opacity-60 grayscale" : ""}
-                                            ${cartItem ? "ring-2 ring-purple-500 ring-offset-2" : ""}
-                                        `}
-                                    >
-                                        {/* Product Image */}
-                                        <div className="aspect-square bg-gradient-to-b from-gray-50 to-gray-100 relative flex items-center justify-center">
-                                            {product.imageUrl ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img
-                                                    src={product.imageUrl}
-                                                    alt={product.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                                                    }}
-                                                />
-                                            ) : null}
-                                            <span className={`text-4xl ${product.imageUrl ? 'hidden' : ''}`}>🥬</span>
-
-                                            {/* Stock Badge */}
-                                            {isOutOfStock && (
-                                                <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium text-center py-1">
-                                                    Hết hàng
-                                                </div>
-                                            )}
-
-                                            {/* Wholesale Price Indicator */}
-                                            {product.hasWholesalePrice && !product.isExpired && (
-                                                <Badge className="absolute top-2 right-2 bg-purple-500 text-white text-[10px]">
-                                                    Giá sỉ
-                                                </Badge>
-                                            )}
-
-                                            {/* Cart Quantity Badge */}
-                                            {cartItem && (
-                                                <div className="absolute bottom-2 right-2 bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
-                                                    {cartItem.quantity}
-                                                </div>
-                                            )}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 bg-green-50 rounded-lg px-4 py-3 border border-green-200">
+                                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                            <h3 className="font-semibold text-green-800">Sản phẩm còn hàng</h3>
+                                            <Badge className="bg-green-500 text-white ml-auto">{inStockProducts.length}</Badge>
                                         </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {inStockProducts.map(product => {
+                                                const cartItem = cart.find(item => item.product.id === product.id);
+                                                const isDisabled = product.isExpired;
 
-                                        {/* Product Info */}
-                                        <div className="p-3 space-y-2">
-                                            <h3 className="font-medium text-sm line-clamp-2 h-10">{product.name}</h3>
-
-                                            <div className="flex items-center justify-between">
-                                                {product.isExpired ? (
-                                                    <div className="text-red-500 text-xs flex items-center gap-1">
-                                                        <AlertCircle className="w-3 h-3" />
-                                                        Giá hết hạn
-                                                    </div>
-                                                ) : (
-                                                    <div>
-                                                        <span className="font-bold text-lg text-purple-600">
-                                                            {formatCurrency(product.displayPrice)}đ
-                                                        </span>
-                                                        <span className="text-xs text-gray-400 ml-1">/{product.unit}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Actions */}
-                                            {product.isExpired ? (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-full text-red-500 border-red-200"
-                                                    disabled
-                                                >
-                                                    <AlertCircle className="w-4 h-4 mr-1" />
-                                                    Liên hệ shop
-                                                </Button>
-                                            ) : isOutOfStock ? (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="w-full text-gray-400 border-gray-200"
-                                                    disabled
-                                                >
-                                                    Hết hàng
-                                                </Button>
-                                            ) : cartItem ? (
-                                                <div className="flex items-center gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-9 w-9 rounded-full"
-                                                        onClick={() => updateQuantity(product.id, -0.5)}
+                                                return (
+                                                    <div
+                                                        key={product.id}
+                                                        className={`
+                                                            bg-white rounded-xl shadow-sm border overflow-hidden
+                                                            transition-all duration-200 hover:shadow-lg hover:scale-[1.02]
+                                                            ${isDisabled ? "opacity-60 grayscale" : ""}
+                                                            ${cartItem ? "ring-2 ring-purple-500 ring-offset-2" : ""}
+                                                        `}
                                                     >
-                                                        <Minus className="w-4 h-4" />
-                                                    </Button>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.1"
-                                                        min="0"
-                                                        value={cartItem.quantity}
-                                                        onChange={(e) => setQuantity(product.id, parseFloat(e.target.value) || 0)}
-                                                        className="h-9 text-center font-medium flex-1"
-                                                    />
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-9 w-9 rounded-full"
-                                                        onClick={() => updateQuantity(product.id, 0.5)}
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <Button
-                                                    variant="default"
-                                                    size="sm"
-                                                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                                                    onClick={() => addToCart(product)}
-                                                >
-                                                    <Plus className="w-4 h-4 mr-1" /> Thêm vào giỏ
-                                                </Button>
-                                            )}
+                                                        {/* Product Image */}
+                                                        <div className="aspect-square bg-gradient-to-b from-gray-50 to-gray-100 relative flex items-center justify-center">
+                                                            {product.imageUrl ? (
+                                                                // eslint-disable-next-line @next/next/no-img-element
+                                                                <img
+                                                                    src={product.imageUrl}
+                                                                    alt={product.name}
+                                                                    className="w-full h-full object-cover"
+                                                                    onError={(e) => {
+                                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                                                    }}
+                                                                />
+                                                            ) : null}
+                                                            <span className={`text-4xl ${product.imageUrl ? 'hidden' : ''}`}>🥬</span>
+
+                                                            {/* Wholesale Price Indicator */}
+                                                            {product.hasWholesalePrice && !product.isExpired && (
+                                                                <Badge className="absolute top-2 right-2 bg-purple-500 text-white text-[10px]">
+                                                                    Giá sỉ
+                                                                </Badge>
+                                                            )}
+
+                                                            {/* Cart Quantity Badge */}
+                                                            {cartItem && (
+                                                                <div className="absolute bottom-2 right-2 bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
+                                                                    {cartItem.quantity}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Product Info */}
+                                                        <div className="p-3 space-y-2">
+                                                            <h3 className="font-medium text-sm line-clamp-2 h-10">{product.name}</h3>
+
+                                                            <div className="flex items-center justify-between">
+                                                                {product.isExpired ? (
+                                                                    <div className="text-red-500 text-xs flex items-center gap-1">
+                                                                        <AlertCircle className="w-3 h-3" />
+                                                                        Giá hết hạn
+                                                                    </div>
+                                                                ) : (
+                                                                    <div>
+                                                                        <span className="font-bold text-lg text-purple-600">
+                                                                            {formatCurrency(product.displayPrice)}đ
+                                                                        </span>
+                                                                        <span className="text-xs text-gray-400 ml-1">/{product.unit}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Actions */}
+                                                            {product.isExpired ? (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="w-full text-red-500 border-red-200"
+                                                                    disabled
+                                                                >
+                                                                    <AlertCircle className="w-4 h-4 mr-1" />
+                                                                    Liên hệ shop
+                                                                </Button>
+                                                            ) : cartItem ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        className="h-9 w-9 rounded-full"
+                                                                        onClick={() => updateQuantity(product.id, -0.5)}
+                                                                    >
+                                                                        <Minus className="w-4 h-4" />
+                                                                    </Button>
+                                                                    <Input
+                                                                        type="number"
+                                                                        step="0.1"
+                                                                        min="0"
+                                                                        value={cartItem.quantity}
+                                                                        onChange={(e) => setQuantity(product.id, parseFloat(e.target.value) || 0)}
+                                                                        className="h-9 text-center font-medium flex-1"
+                                                                    />
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        className="h-9 w-9 rounded-full"
+                                                                        onClick={() => updateQuantity(product.id, 0.5)}
+                                                                    >
+                                                                        <Plus className="w-4 h-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            ) : (
+                                                                <Button
+                                                                    variant="default"
+                                                                    size="sm"
+                                                                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                                                                    onClick={() => addToCart(product)}
+                                                                >
+                                                                    <Plus className="w-4 h-4 mr-1" /> Thêm vào giỏ
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );
-                            })
-                        )}
-                    </div>
+                            })()}
+
+                            {/* Section 2: Out-of-stock products */}
+                            {(() => {
+                                const outOfStockProducts = filteredProducts
+                                    .filter(p => p.stock <= 0)
+                                    .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+                                
+                                if (outOfStockProducts.length === 0) return null;
+                                
+                                return (
+                                    <div className="space-y-4 mt-8">
+                                        <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-4 py-3 border border-gray-200">
+                                            <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                                            <h3 className="font-semibold text-gray-600">Sản phẩm tạm hết</h3>
+                                            <Badge variant="secondary" className="ml-auto">{outOfStockProducts.length}</Badge>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {outOfStockProducts.map(product => {
+                                                const isDisabled = true;
+
+                                                return (
+                                                    <div
+                                                        key={product.id}
+                                                        className={`
+                                                            bg-white rounded-xl shadow-sm border overflow-hidden
+                                                            transition-all duration-200
+                                                            opacity-60 grayscale
+                                                        `}
+                                                    >
+                                                        {/* Product Image */}
+                                                        <div className="aspect-square bg-gradient-to-b from-gray-50 to-gray-100 relative flex items-center justify-center">
+                                                            {product.imageUrl ? (
+                                                                // eslint-disable-next-line @next/next/no-img-element
+                                                                <img
+                                                                    src={product.imageUrl}
+                                                                    alt={product.name}
+                                                                    className="w-full h-full object-cover"
+                                                                    onError={(e) => {
+                                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                                                    }}
+                                                                />
+                                                            ) : null}
+                                                            <span className={`text-4xl ${product.imageUrl ? 'hidden' : ''}`}>🥬</span>
+
+                                                            {/* Out of Stock Badge */}
+                                                            <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium text-center py-1">
+                                                                Hết hàng
+                                                            </div>
+
+                                                            {/* Wholesale Price Indicator */}
+                                                            {product.hasWholesalePrice && !product.isExpired && (
+                                                                <Badge className="absolute top-2 right-2 bg-purple-500 text-white text-[10px]">
+                                                                    Giá sỉ
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Product Info */}
+                                                        <div className="p-3 space-y-2">
+                                                            <h3 className="font-medium text-sm line-clamp-2 h-10">{product.name}</h3>
+
+                                                            <div className="flex items-center justify-between">
+                                                                {product.isExpired ? (
+                                                                    <div className="text-red-500 text-xs flex items-center gap-1">
+                                                                        <AlertCircle className="w-3 h-3" />
+                                                                        Giá hết hạn
+                                                                    </div>
+                                                                ) : (
+                                                                    <div>
+                                                                        <span className="font-bold text-lg text-gray-400">
+                                                                            {formatCurrency(product.displayPrice)}đ
+                                                                        </span>
+                                                                        <span className="text-xs text-gray-400 ml-1">/{product.unit}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Actions - Disabled */}
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="w-full text-gray-400 border-gray-200"
+                                                                disabled
+                                                            >
+                                                                Hết hàng
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </>
+                    )}
 
                     {/* Cart Summary */}
                     {cart.length > 0 && (
