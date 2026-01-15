@@ -10,25 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { deleteOrder, updateOrderStatus, ORDER_STATUSES, OrderStatus } from "./actions";
+import { deleteOrder, updateOrderStatus } from "./actions";
+import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-constants";
 import { OrderReceipt } from "./order-receipt";
 import html2canvas from "html2canvas";
-
-// Local helper function (sync) - not a server action
-function getAllowedNextStatuses(currentStatus: string): OrderStatus[] {
-    switch (currentStatus) {
-        case "PENDING":
-            return ["PROCESSING", "CANCELLED"];
-        case "PROCESSING":
-            return ["READY", "CANCELLED"];
-        case "READY":
-            return ["SHIPPING"];
-        case "SHIPPING":
-            return ["COMPLETED"];
-        default:
-            return [];
-    }
-}
 
 type OrderWithRelations = Order & {
     customer: Customer | null;

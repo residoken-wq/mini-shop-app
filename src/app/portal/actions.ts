@@ -248,17 +248,7 @@ export async function getShopBankInfo() {
     }
 }
 
-// Order Status Constants (duplicate for Portal use)
-export const ORDER_STATUSES = {
-    PENDING: { label: "Chờ xử lý", color: "yellow", step: 1 },
-    PROCESSING: { label: "Đang xử lý", color: "blue", step: 2 },
-    READY: { label: "Đủ hàng", color: "purple", step: 3 },
-    SHIPPING: { label: "Đang giao", color: "orange", step: 4 },
-    COMPLETED: { label: "Hoàn tất", color: "green", step: 5 },
-    CANCELLED: { label: "Đã hủy", color: "red", step: 0 },
-} as const;
-
-export type OrderStatus = keyof typeof ORDER_STATUSES;
+import { ORDER_STATUSES, OrderStatus } from "@/app/orders/order-constants";
 
 // Track orders by phone number (for customer)
 export async function trackOrdersByPhone(phone: string) {

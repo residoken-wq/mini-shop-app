@@ -17,7 +17,8 @@ import {
     ChevronUp,
     MapPin
 } from "lucide-react";
-import { trackOrdersByPhone, ORDER_STATUSES, OrderStatus } from "./actions";
+import { trackOrdersByPhone } from "./actions";
+import { ORDER_STATUSES, OrderStatus } from "@/app/orders/order-constants";
 import { cn } from "@/lib/utils";
 
 interface TrackedOrder {
