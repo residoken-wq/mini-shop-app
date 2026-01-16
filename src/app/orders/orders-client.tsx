@@ -14,6 +14,7 @@ import { deleteOrder, updateOrderStatus, getOrders } from "./actions";
 import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-constants";
 import { OrderReceipt } from "./order-receipt";
 import { OrderEditableItems } from "./order-editable-items";
+import { PendingOrdersPreparation } from "./pending-orders-preparation";
 import html2canvas from "html2canvas";
 
 type OrderWithRelations = Order & {
@@ -33,6 +34,7 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
     const [selectedOrder, setSelectedOrder] = useState<OrderWithRelations | null>(null);
     const [isPrinting, setIsPrinting] = useState(false);
     const [viewMode, setViewMode] = useState<"receipt" | "edit">("receipt");
+    const [showPreparation, setShowPreparation] = useState(false);
     const receiptRef = useRef<HTMLDivElement>(null);
 
     const refreshOrders = async () => {
@@ -152,8 +154,21 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                         <Truck className="h-4 w-4 mr-2" />
                         Mua hàng
                     </Button>
+                    <Button
+                        variant={showPreparation ? "default" : "outline"}
+                        onClick={() => setShowPreparation(!showPreparation)}
+                        className={showPreparation ? "bg-purple-600 hover:bg-purple-700" : ""}
+                    >
+                        <Package className="h-4 w-4 mr-2" />
+                        Chuẩn bị hàng
+                    </Button>
                 </div>
             </div>
+
+            {/* Pending Orders Preparation Section */}
+            {showPreparation && (
+                <PendingOrdersPreparation onOrderUpdated={refreshOrders} />
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

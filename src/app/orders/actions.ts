@@ -252,3 +252,107 @@ export async function deleteOrderItem(itemId: string) {
         return { success: false, error: "Failed to delete item" };
     }
 }
+
+// Get pending orders summary with aggregated products and real-time stock
+export async function getPendingOrdersSummary() {
+    try {
+        // Get all pending/processing SALE orders
+        const pendingOrders = await db.order.findMany({
+            where: {
+                type: "SALE",
+                status: { in: ["PENDING", "PROCESSING"] }
+            },
+            include: {
+                customer: true,
+                items: {
+                    include: { product: true }
+                }
+            },
+            orderBy: { createdAt: "asc" }
+        });
+
+        // Aggregate products across all orders
+        const productMap = new Map<string, {
+            productId: string;
+            name: string;
+            sku: string;
+            unit: string;
+            totalRequired: number;
+            currentStock: number;
+        }>();
+
+        for (const order of pendingOrders) {
+            for (const item of order.items) {
+                const existing = productMap.get(item.productId);
+                if (existing) {
+                    existing.totalRequired += item.quantity;
+                } else {
+                    productMap.set(item.productId, {
+                        productId: item.productId,
+                        name: item.product.name,
+                        sku: item.product.sku,
+                        unit: item.product.unit,
+                        totalRequired: item.quantity,
+                        currentStock: item.product.stock
+                    });
+                }
+            }
+        }
+
+        // Get fresh stock data for all products
+        const productIds = Array.from(productMap.keys());
+        if (productIds.length > 0) {
+            const freshProducts = await db.product.findMany({
+                where: { id: { in: productIds } },
+                select: { id: true, stock: true }
+            });
+            for (const p of freshProducts) {
+                const item = productMap.get(p.id);
+                if (item) item.currentStock = p.stock;
+            }
+        }
+
+        const aggregatedProducts = Array.from(productMap.values()).map(p => ({
+            ...p,
+            isEnough: p.currentStock >= p.totalRequired,
+            shortage: Math.max(0, p.totalRequired - p.currentStock)
+        }));
+
+        // Check if each order has enough stock
+        const ordersWithStatus = pendingOrders.map(order => {
+            const allItemsAvailable = order.items.every(item => {
+                const productInfo = productMap.get(item.productId);
+                return productInfo && productInfo.currentStock >= item.quantity;
+            });
+
+            return {
+                id: order.id,
+                code: order.code,
+                status: order.status,
+                customerName: order.customer?.name || "Khách lẻ",
+                recipientName: order.recipientName,
+                itemCount: order.items.length,
+                total: order.total,
+                createdAt: order.createdAt,
+                allItemsAvailable,
+                items: order.items.map(item => ({
+                    productName: item.product.name,
+                    sku: item.product.sku,
+                    quantity: item.quantity,
+                    unit: item.product.unit,
+                    currentStock: productMap.get(item.productId)?.currentStock || 0
+                }))
+            };
+        });
+
+        return {
+            success: true,
+            aggregatedProducts,
+            orders: ordersWithStatus,
+            totalOrders: pendingOrders.length
+        };
+    } catch (error) {
+        console.error("Failed to get pending orders summary:", error);
+        return { success: false, error: "Failed to get pending orders" };
+    }
+}

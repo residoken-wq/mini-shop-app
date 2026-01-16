@@ -117,12 +117,7 @@ export default function LoginPage() {
                         </Button>
                     </form>
 
-                    {/* Default credentials hint */}
-                    <div className="mt-6 p-3 rounded-lg bg-blue-500/20 border border-blue-500/30">
-                        <p className="text-blue-200 text-sm text-center">
-                            Tài khoản mặc định: <strong>admin</strong> / <strong>admin123</strong>
-                        </p>
-                    </div>
+
                 </div>
 
                 {/* Footer */}
