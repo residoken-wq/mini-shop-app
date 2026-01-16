@@ -134,6 +134,10 @@ export async function submitPortalOrder(data: {
     recipientName?: string;
     recipientPhone?: string;
     deliveryAddress?: string;
+    // Delivery method: "PICKUP" or "DELIVERY"
+    deliveryMethod?: string;
+    // Customer note
+    note?: string;
     // Payment method: "QR", "COD", "CREDIT"
     paymentMethod?: string;
     items: { productId: string; quantity: number; price: number }[];
@@ -144,14 +148,17 @@ export async function submitPortalOrder(data: {
             return { success: false, error: "Vui lòng chọn ít nhất 1 sản phẩm" };
         }
 
+        const deliveryMethod = data.deliveryMethod || "DELIVERY";
+
         // Validate delivery info
         if (!data.recipientName?.trim()) {
             return { success: false, error: "Vui lòng nhập tên người nhận" };
         }
         if (!data.recipientPhone?.trim()) {
-            return { success: false, error: "Vui lòng nhập số điện thoại giao hàng" };
+            return { success: false, error: "Vui lòng nhập số điện thoại" };
         }
-        if (!data.deliveryAddress?.trim()) {
+        // Only require address for DELIVERY method
+        if (deliveryMethod === "DELIVERY" && !data.deliveryAddress?.trim()) {
             return { success: false, error: "Vui lòng nhập địa chỉ giao hàng" };
         }
 
@@ -195,7 +202,9 @@ export async function submitPortalOrder(data: {
                 customerId: data.customerId || null,
                 recipientName: data.recipientName,
                 recipientPhone: data.recipientPhone,
-                deliveryAddress: data.deliveryAddress,
+                deliveryAddress: deliveryMethod === "DELIVERY" ? data.deliveryAddress : null,
+                deliveryMethod: deliveryMethod,
+                note: data.note || null,
                 paymentMethod: paymentMethod,
                 items: {
                     create: data.items.map(item => ({

@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle, Edit } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { deleteOrder, updateOrderStatus } from "./actions";
+import { deleteOrder, updateOrderStatus, getOrders } from "./actions";
 import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-constants";
 import { OrderReceipt } from "./order-receipt";
+import { OrderEditableItems } from "./order-editable-items";
 import html2canvas from "html2canvas";
 
 type OrderWithRelations = Order & {
@@ -31,7 +32,17 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
     const [filterType, setFilterType] = useState<"ALL" | "SALE" | "PURCHASE">("ALL");
     const [selectedOrder, setSelectedOrder] = useState<OrderWithRelations | null>(null);
     const [isPrinting, setIsPrinting] = useState(false);
+    const [viewMode, setViewMode] = useState<"receipt" | "edit">("receipt");
     const receiptRef = useRef<HTMLDivElement>(null);
+
+    const refreshOrders = async () => {
+        const newOrders = await getOrders();
+        setOrders(newOrders);
+        if (selectedOrder) {
+            const updated = newOrders.find(o => o.id === selectedOrder.id);
+            if (updated) setSelectedOrder(updated);
+        }
+    };
 
     const handlePrintOrder = async () => {
         if (!receiptRef.current || !selectedOrder) return;
@@ -321,10 +332,39 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                                 </div>
                             )}
 
-                            {/* Print Receipt Preview */}
-                            <div className="border rounded-lg overflow-hidden shadow-sm">
-                                <OrderReceipt ref={receiptRef} order={selectedOrder} />
+                            {/* View Mode Tabs */}
+                            <div className="flex gap-2 border-b pb-2">
+                                <Button
+                                    size="sm"
+                                    variant={viewMode === "receipt" ? "default" : "outline"}
+                                    onClick={() => setViewMode("receipt")}
+                                >
+                                    📄 Xem hóa đơn
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant={viewMode === "edit" ? "default" : "outline"}
+                                    onClick={() => setViewMode("edit")}
+                                >
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    Chỉnh sửa
+                                </Button>
                             </div>
+
+                            {/* Content based on view mode */}
+                            {viewMode === "receipt" ? (
+                                <div className="border rounded-lg overflow-hidden shadow-sm">
+                                    <OrderReceipt ref={receiptRef} order={selectedOrder} />
+                                </div>
+                            ) : (
+                                <OrderEditableItems
+                                    orderId={selectedOrder.id}
+                                    items={selectedOrder.items}
+                                    discount={(selectedOrder as any).discount || 0}
+                                    status={selectedOrder.status}
+                                    onUpdate={refreshOrders}
+                                />
+                            )}
                         </div>
                     )}
                     {/* Print Button Fixed at Bottom */}

@@ -27,6 +27,7 @@ interface TrackedOrder {
     status: string;
     statusInfo: { label: string; color: string; step: number };
     total: number;
+    discount: number;
     paymentMethod: string;
     recipientName: string | null;
     recipientPhone: string | null;
@@ -294,8 +295,23 @@ export default function OrderTracking() {
                                                     </Badge>
                                                 )}
                                             </div>
+
+                                            {/* Show discount when READY or later and discount > 0 */}
+                                            {order.discount > 0 && ["READY", "SHIPPING", "COMPLETED"].includes(order.status) && (
+                                                <>
+                                                    <div className="flex justify-between text-gray-600">
+                                                        <span>Tạm tính:</span>
+                                                        <span>{formatCurrency(order.total + order.discount)}đ</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-orange-600">
+                                                        <span>🏷️ Giảm giá:</span>
+                                                        <span className="font-medium">-{formatCurrency(order.discount)}đ</span>
+                                                    </div>
+                                                </>
+                                            )}
+
                                             <div className="flex justify-between pt-2 border-t">
-                                                <span className="font-medium">Tổng cộng:</span>
+                                                <span className="font-medium">Thành tiền:</span>
                                                 <span className="font-bold text-purple-600">{formatCurrency(order.total)}đ</span>
                                             </div>
                                         </div>

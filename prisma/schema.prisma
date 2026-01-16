@@ -106,8 +106,17 @@ model Order {
   recipientPhone   String?
   deliveryAddress  String?
 
+  // Delivery method: "PICKUP" or "DELIVERY"
+  deliveryMethod   String   @default("DELIVERY")
+
+  // Customer note
+  note             String?
+
   // Payment method: "QR", "COD", "CREDIT"
   paymentMethod    String   @default("COD")
+
+  // Discount amount
+  discount         Float    @default(0)
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])

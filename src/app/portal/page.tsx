@@ -67,6 +67,8 @@ export default function PortalPage() {
     const [recipientName, setRecipientName] = useState("");
     const [recipientPhone, setRecipientPhone] = useState("");
     const [deliveryAddress, setDeliveryAddress] = useState("");
+    const [deliveryMethod, setDeliveryMethod] = useState<"PICKUP" | "DELIVERY">("DELIVERY");
+    const [orderNote, setOrderNote] = useState("");
 
     const [orderResult, setOrderResult] = useState<{
         success: boolean;
@@ -224,6 +226,8 @@ export default function PortalPage() {
                 recipientName,
                 recipientPhone,
                 deliveryAddress,
+                deliveryMethod,
+                note: orderNote,
                 paymentMethod,
                 items: cart.map(item => ({
                     productId: item.product.id,
@@ -762,13 +766,61 @@ export default function PortalPage() {
                         </div>
                     </div>
 
+                    {/* Delivery Method Selection */}
+                    <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+                        <div className="flex items-center gap-2 text-gray-700 mb-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                🚚
+                            </div>
+                            <h3 className="font-semibold">Hình thức nhận hàng</h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            {/* Pickup Option */}
+                            <button
+                                onClick={() => setDeliveryMethod("PICKUP")}
+                                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${deliveryMethod === "PICKUP"
+                                    ? "border-purple-500 bg-purple-50 shadow-md"
+                                    : "border-gray-200 hover:border-purple-300"
+                                    }`}
+                            >
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${deliveryMethod === "PICKUP" ? "bg-purple-500 text-white" : "bg-gray-100"
+                                    }`}>
+                                    🏪
+                                </div>
+                                <span className={`font-medium text-sm ${deliveryMethod === "PICKUP" ? "text-purple-700" : "text-gray-700"
+                                    }`}>Lấy tại Shop</span>
+                                <span className="text-xs text-gray-500">Tự đến lấy hàng</span>
+                            </button>
+
+                            {/* Delivery Option */}
+                            <button
+                                onClick={() => setDeliveryMethod("DELIVERY")}
+                                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${deliveryMethod === "DELIVERY"
+                                    ? "border-purple-500 bg-purple-50 shadow-md"
+                                    : "border-gray-200 hover:border-purple-300"
+                                    }`}
+                            >
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${deliveryMethod === "DELIVERY" ? "bg-purple-500 text-white" : "bg-gray-100"
+                                    }`}>
+                                    🛵
+                                </div>
+                                <span className={`font-medium text-sm ${deliveryMethod === "DELIVERY" ? "text-purple-700" : "text-gray-700"
+                                    }`}>Giao hàng</span>
+                                <span className="text-xs text-gray-500">Giao theo địa chỉ</span>
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Delivery Info Form */}
                     <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
                         <div className="flex items-center gap-2 text-gray-700 mb-2">
                             <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                                 <ArrowRight className="w-4 h-4 text-purple-600 rotate-90" />
                             </div>
-                            <h3 className="font-semibold">Thông tin giao hàng</h3>
+                            <h3 className="font-semibold">
+                                {deliveryMethod === "PICKUP" ? "Thông tin người nhận" : "Thông tin giao hàng"}
+                            </h3>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -791,20 +843,37 @@ export default function PortalPage() {
                                     type="tel"
                                     value={recipientPhone}
                                     onChange={(e) => setRecipientPhone(e.target.value)}
-                                    placeholder="Nhập số điện thoại giao hàng"
+                                    placeholder="Nhập số điện thoại"
                                     className="h-11 border-gray-200"
                                 />
                             </div>
                         </div>
+
+                        {/* Address - Only show for DELIVERY */}
+                        {deliveryMethod === "DELIVERY" && (
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                                    📍 Địa chỉ giao hàng *
+                                </label>
+                                <Input
+                                    value={deliveryAddress}
+                                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                                    placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
+                                    className="h-11 border-gray-200"
+                                />
+                            </div>
+                        )}
+
+                        {/* Note */}
                         <div className="space-y-1">
                             <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                                📍 Địa chỉ giao hàng *
+                                📝 Ghi chú (tùy chọn)
                             </label>
-                            <Input
-                                value={deliveryAddress}
-                                onChange={(e) => setDeliveryAddress(e.target.value)}
-                                placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-                                className="h-11 border-gray-200"
+                            <textarea
+                                value={orderNote}
+                                onChange={(e) => setOrderNote(e.target.value)}
+                                placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi giao..."
+                                className="w-full min-h-[80px] px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             />
                         </div>
                     </div>

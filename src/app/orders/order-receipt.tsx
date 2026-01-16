@@ -61,9 +61,16 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             ĐT: {order.recipientPhone || order.customer?.phone}
                         </p>
                     )}
+                    {/* Delivery Method */}
+                    <p className="text-sm">
+                        <span className="text-gray-500">Nhận hàng:</span>{" "}
+                        <span className="font-medium">
+                            {order.deliveryMethod === "PICKUP" ? "🏪 Lấy tại shop" : "🛵 Giao hàng"}
+                        </span>
+                    </p>
                     {order.deliveryAddress && (
                         <p className="text-sm text-gray-500">
-                            Địa chỉ: {order.deliveryAddress}
+                            📍 {order.deliveryAddress}
                         </p>
                     )}
                     {order.paymentMethod && (
@@ -74,6 +81,12 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                                     order.paymentMethod === "QR" ? "📱 Chuyển khoản" :
                                         order.paymentMethod === "CREDIT" ? "📋 Công nợ" : order.paymentMethod}
                             </span>
+                        </p>
+                    )}
+                    {/* Note */}
+                    {order.note && (
+                        <p className="text-sm mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                            <span className="text-gray-600">📝 Ghi chú:</span> {order.note}
                         </p>
                     )}
                 </div>

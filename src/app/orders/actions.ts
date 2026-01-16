@@ -135,6 +135,7 @@ export async function trackOrdersByPhone(phone: string) {
             status: order.status,
             statusInfo: ORDER_STATUSES[order.status as OrderStatus] || ORDER_STATUSES.PENDING,
             total: order.total,
+            discount: order.discount || 0,
             paymentMethod: order.paymentMethod,
             recipientName: order.recipientName,
             recipientPhone: order.recipientPhone,
@@ -147,4 +148,107 @@ export async function trackOrdersByPhone(phone: string) {
             }))
         }))
     };
+}
+
+// Update order item quantity and price
+export async function updateOrderItem(itemId: string, data: { quantity?: number; price?: number }) {
+    try {
+        const item = await db.orderItem.update({
+            where: { id: itemId },
+            data: {
+                quantity: data.quantity,
+                price: data.price
+            }
+        });
+
+        // Recalculate order total
+        const order = await db.order.findUnique({
+            where: { id: item.orderId },
+            include: { items: true }
+        });
+
+        if (order) {
+            const itemsTotal = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            const newTotal = itemsTotal - (order.discount || 0);
+            await db.order.update({
+                where: { id: order.id },
+                data: { total: Math.max(0, newTotal) }
+            });
+        }
+
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update order item:", error);
+        return { success: false, error: "Failed to update order item" };
+    }
+}
+
+// Update order discount
+export async function updateOrderDiscount(orderId: string, discount: number) {
+    try {
+        const order = await db.order.findUnique({
+            where: { id: orderId },
+            include: { items: true }
+        });
+
+        if (!order) {
+            return { success: false, error: "Order not found" };
+        }
+
+        const itemsTotal = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const newTotal = Math.max(0, itemsTotal - discount);
+
+        await db.order.update({
+            where: { id: orderId },
+            data: {
+                discount,
+                total: newTotal
+            }
+        });
+
+        revalidatePath("/orders");
+        return { success: true, newTotal };
+    } catch (error) {
+        console.error("Failed to update order discount:", error);
+        return { success: false, error: "Failed to update discount" };
+    }
+}
+
+// Delete order item
+export async function deleteOrderItem(itemId: string) {
+    try {
+        const item = await db.orderItem.findUnique({
+            where: { id: itemId }
+        });
+
+        if (!item) {
+            return { success: false, error: "Item not found" };
+        }
+
+        await db.orderItem.delete({
+            where: { id: itemId }
+        });
+
+        // Recalculate order total
+        const order = await db.order.findUnique({
+            where: { id: item.orderId },
+            include: { items: true }
+        });
+
+        if (order) {
+            const itemsTotal = order.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            const newTotal = Math.max(0, itemsTotal - (order.discount || 0));
+            await db.order.update({
+                where: { id: order.id },
+                data: { total: newTotal }
+            });
+        }
+
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete order item:", error);
+        return { success: false, error: "Failed to delete item" };
+    }
 }
