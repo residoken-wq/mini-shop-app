@@ -4,7 +4,7 @@
 import { ShoppingCart, Trash2, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CartItem, formatCurrency } from "../../types";
+import { CartItem, Product, formatCurrency } from "../../types";
 import { getImageUrl } from "@/lib/image-utils";
 
 interface CartItemListProps {

@@ -5,6 +5,7 @@ import { ArrowLeft, User, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     CartItem,
+    Product,
     CustomerType,
     Customer,
     District,
