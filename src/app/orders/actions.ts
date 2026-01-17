@@ -406,6 +406,27 @@ export async function startShipping(orderId: string, data: {
             }
         });
 
+        // Send SMS notification to customer
+        try {
+            if (order.recipientPhone) {
+                const { sendShippingNotification } = await import("@/lib/sms");
+                sendShippingNotification({
+                    orderCode: order.code,
+                    recipientName: order.recipientName || "Quý khách",
+                    recipientPhone: order.recipientPhone
+                }).then(result => {
+                    if (result.success) {
+                        console.log(`SMS sent for order ${order.code}`);
+                    } else {
+                        console.error(`SMS failed for order ${order.code}:`, result.error);
+                    }
+                }).catch(err => console.error("SMS error:", err));
+            }
+        } catch (smsError) {
+            console.error("Failed to send SMS:", smsError);
+            // Don't fail shipping if SMS fails
+        }
+
         revalidatePath("/orders");
         return { success: true };
     } catch (error) {

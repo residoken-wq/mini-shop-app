@@ -192,5 +192,14 @@ model ShopSettings {
   bankName    String   @default("")
   bankAccount String   @default("")
   bankOwner   String   @default("")
+  // SMTP Email Configuration
+  smtpHost       String   @default("")
+  smtpPort       Int      @default(587)
+  smtpUser       String   @default("")
+  smtpPass       String   @default("")
+  smtpFrom       String   @default("")
+  notifyEmails   String   @default("")  // Comma-separated emails
+  emailEnabled   Boolean  @default(false)
   updatedAt   DateTime @updatedAt
 }
+

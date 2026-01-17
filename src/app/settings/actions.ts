@@ -35,6 +35,14 @@ export async function updateShopSettings(data: {
     bankName?: string;
     bankAccount?: string;
     bankOwner?: string;
+    // SMTP Email Config
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUser?: string;
+    smtpPass?: string;
+    smtpFrom?: string;
+    notifyEmails?: string;
+    emailEnabled?: boolean;
 }) {
     try {
         const settings = await db.shopSettings.upsert({
@@ -46,7 +54,15 @@ export async function updateShopSettings(data: {
                 email: data.email || "",
                 bankName: data.bankName || "",
                 bankAccount: data.bankAccount || "",
-                bankOwner: data.bankOwner || ""
+                bankOwner: data.bankOwner || "",
+                // SMTP fields
+                smtpHost: data.smtpHost || "",
+                smtpPort: data.smtpPort || 587,
+                smtpUser: data.smtpUser || "",
+                smtpPass: data.smtpPass || "",
+                smtpFrom: data.smtpFrom || "",
+                notifyEmails: data.notifyEmails || "",
+                emailEnabled: data.emailEnabled || false
             },
             create: {
                 id: "shop",
@@ -56,7 +72,15 @@ export async function updateShopSettings(data: {
                 email: data.email || "",
                 bankName: data.bankName || "",
                 bankAccount: data.bankAccount || "",
-                bankOwner: data.bankOwner || ""
+                bankOwner: data.bankOwner || "",
+                // SMTP fields
+                smtpHost: data.smtpHost || "",
+                smtpPort: data.smtpPort || 587,
+                smtpUser: data.smtpUser || "",
+                smtpPass: data.smtpPass || "",
+                smtpFrom: data.smtpFrom || "",
+                notifyEmails: data.notifyEmails || "",
+                emailEnabled: data.emailEnabled || false
             }
         });
 
@@ -67,6 +91,19 @@ export async function updateShopSettings(data: {
     } catch (error) {
         console.error("Update settings error:", error);
         return { success: false, error: "Lỗi cập nhật cài đặt" };
+    }
+}
+
+// ============ EMAIL TEST ============
+
+export async function testEmailSettings() {
+    try {
+        const { sendTestEmail } = await import("@/lib/email");
+        const result = await sendTestEmail();
+        return result;
+    } catch (error) {
+        console.error("Test email error:", error);
+        return { success: false, error: String(error) };
     }
 }
 

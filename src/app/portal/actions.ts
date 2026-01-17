@@ -221,6 +221,31 @@ export async function submitPortalOrder(data: {
             }
         });
 
+        // Send email notification (async, don't block)
+        try {
+            const { sendOrderNotificationEmail } = await import("@/lib/email");
+            sendOrderNotificationEmail({
+                code: orderCode,
+                customerName: data.recipientName || "Khách lẻ",
+                customerPhone: data.recipientPhone || "",
+                deliveryAddress: data.deliveryAddress,
+                deliveryMethod: deliveryMethod,
+                paymentMethod: paymentMethod,
+                items: order.items.map(item => ({
+                    name: item.product.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                    unit: item.product.unit
+                })),
+                total,
+                note: data.note,
+                createdAt: order.createdAt
+            }).catch(err => console.error("Email notification failed:", err));
+        } catch (emailError) {
+            console.error("Failed to send email notification:", emailError);
+            // Don't fail the order if email fails
+        }
+
         revalidatePath("/orders");
 
         return {

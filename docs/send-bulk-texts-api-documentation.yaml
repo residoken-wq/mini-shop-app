@@ -1,0 +1,334 @@
+openapi: 3.0.3
+info:
+  title: Send Bulk Texts API
+  version: "1.0"
+  description: >
+    Public endpoints for Send Bulk Texts.
+    All endpoints require HTTPS. Authentication is performed using an `apikey`
+    that belongs to an account and the numeric `accountid`.
+
+servers:
+  - url: https://www.sendbulktexts.com/sms-api
+tags:
+  - name: SMS
+
+paths:
+
+
+  /v1/{accountid}/create-campaign/{apikey}:
+    post:
+      tags: [SMS]
+      operationId: createSmsMarketingCampaignViaApi
+      summary: Create an bulk SMS campaign (imports recipients by phone list JSON)
+      parameters:
+        - $ref: '#/components/parameters/ApiKey'
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: { $ref: '#/components/schemas/CreateCampaignForm' }
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/CreateCampaignForm' }
+      responses:
+        "200":
+          description: Campaign creation result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SmsMarketingCampaignViaApi' }
+        "400":
+          description: Bad request (rate limit, plan, invalid JSON, etc.)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/{accountid}/list-campaigns/{apikey}:
+    get:
+      tags: [SMS]
+      operationId: listSmsMarketingCampaignsViaApi
+      summary: List bulk SMS campaigns for an account
+      parameters:
+        - $ref: '#/components/parameters/ApiKey'
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        "200":
+          description: Campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SmsMarketingCampaignViaApi' }
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /{accountid}/campaign/{campaignid}/cancel/{apikey}:
+    post:
+      tags: [SMS]
+      operationId: cancelCampaignViaApi
+      summary: Cancel a bulk SMS campaign
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - $ref: '#/components/parameters/CampaignId'
+        - $ref: '#/components/parameters/ApiKey'
+      responses:
+        "200":
+          description: Canceled (no body)
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /{accountid}/campaign/{campaignid}/pause/{apikey}:
+    post:
+      tags: [SMS]
+      operationId: pauseCampaignViaApi
+      summary: Pause a bulk SMS campaign
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - $ref: '#/components/parameters/CampaignId'
+        - $ref: '#/components/parameters/ApiKey'
+      responses:
+        "200":
+          description: Paused (no body)
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /{accountid}/campaign/{campaignid}/resume/{apikey}:
+    post:
+      tags: [SMS]
+      operationId: resumeCampaignViaApi
+      summary: Resume a paused campaign
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - $ref: '#/components/parameters/CampaignId'
+        - $ref: '#/components/parameters/ApiKey'
+      responses:
+        "200":
+          description: Resumed (no body)
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/{accountid}/send-sms/{apikey}:
+    post:
+      tags: [SMS]
+      operationId: sendSmsViaApi
+      summary: Send a single reply SMS (optionally with media URL)
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - $ref: '#/components/parameters/ApiKey'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendSmsForm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendSmsForm'
+      responses:
+        "200":
+          description: Sent (no content body returned)
+        "400":
+          description: Bad request (validation/rate limit/plan/number issues)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Unauthorized (invalid API key / banned)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /v1/{accountid}/list-received-sms/{apikey}:
+    get:
+      tags: [SMS]
+      operationId: listReceivedSmsViaApi
+      summary: List received SMS for an account
+      parameters:
+        - $ref: '#/components/parameters/ApiKey'
+        - $ref: '#/components/parameters/AccountId'
+        - $ref: '#/components/parameters/UnreadOnly'
+      responses:
+        "200":
+          description: Array of received messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/IncomingSmsViaApi' }
+        "400":
+          description: Bad request (rate limit, plan issues, etc.)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+
+components:
+  parameters:
+    ApiKey:
+      in: path
+      name: apikey
+      required: true
+      description: API key (as path segment, per controller route)
+      schema: { type: string }
+    AccountId:
+      in: path
+      name: accountid
+      required: true
+      schema: { type: integer, format: int64 }
+    CampaignId:
+      in: path
+      name: campaignid
+      required: true
+      schema: { type: integer, format: int64 }
+    UnreadOnly:
+      in: query
+      name: unreadonly
+      required: false
+      schema: { type: boolean }
+      description: If true, only return unread messages (server will mark them viewed)
+
+  schemas:
+    SendSmsForm:
+      type: object
+      properties:
+        to:
+          type: string
+          description: Destination phone (E.164 +1..., or normalized per account rules)
+          example: "+12816071883"
+        body:
+          type: string
+          description: SMS body (max length enforced by server config)
+          example: "Hello from API"
+        imageurl:
+          type: string
+          description: Optional media URL (JPEG/PNG/GIF/WebP, server may resize/host)
+          example: "https://example.com/image.jpg"
+      required: [to]
+    CreateCampaignForm:
+      type: object
+      properties:
+        campaignname:
+          type: string
+          example: "September Promo"
+        body:
+          type: string
+          description: Message text for the campaign
+          example: "Hi {{first_name}}, flash sale today!"
+        imageurl:
+          type: string
+          description: Optional media URL for MMS messages
+          example: "https://example.com/offer.png"
+        tophonenumberslistjson:
+          type: string
+          description: JSON.stringify of an array of phone numbers (strings)
+          example: '["+12125551234","+17205550123","+13105550111"]'
+      required: [campaignname, body, tophonenumberslistjson]
+    IncomingSmsViaApi:
+      type: object
+      properties:
+        message:
+          type: string
+        from:
+          type: string
+          description: E.164 formatted sender number
+          example: "+12125551234"
+        accountid:
+          type: integer
+          format: int64
+        receiveddatetime:
+          type: string
+          format: date-time
+    SmsMarketingCampaignViaApi:
+      type: object
+      properties:
+        campaignname: { type: string }
+        body:
+          type: string
+          description: Campaign message body
+        imageurl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          description: One of Importing Contacts, Submitted, Queued, In Progress, Paused, Done
+        additional_status_description:
+          type: string
+          description: System pause reason when paused (if any)
+        contact_received_count: { type: integer }
+        contact_sent_count: { type: integer }
+        response_rate:
+          type: number
+          format: float
+          description: Percentage (0–100, 2 decimals)
+        total_contacts_count: { type: integer }
+        accountid:
+          type: integer
+          format: int64
+        campaignid:
+          type: integer
+          format: int64
+        created_datetime:
+          type: string
+          format: date-time
+      example:
+        campaignname: "September Promo"
+        body: "Hi there! Don’t miss out."
+        imageurl: "https://example.com/offer.png"
+        status: "Importing Contacts"
+        additional_status_description: ""
+        contact_received_count: 0
+        contact_sent_count: 0
+        response_rate: 0
+        total_contacts_count: 350
+        accountid: 12345
+        campaignid: 67890
+        created_datetime: "2025-09-29T12:01:00Z"
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error description (may include rate-limit or plan details)
+      example:
+        message: "Rate limit is active. Please try again in 3 seconds."

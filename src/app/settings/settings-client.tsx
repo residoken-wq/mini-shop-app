@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Store, Phone, MapPin, Mail, Save, Check, CreditCard, Building2, User } from "lucide-react";
-import { updateShopSettings } from "./actions";
+import { Switch } from "@/components/ui/switch";
+import { Store, Phone, MapPin, Mail, Save, Check, CreditCard, Building2, User, Server, Send, AlertCircle } from "lucide-react";
+import { updateShopSettings, testEmailSettings } from "./actions";
 
 interface SettingsClientProps {
     initialSettings: ShopSettings;
@@ -17,6 +18,8 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
     const [settings, setSettings] = useState(initialSettings);
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [testingEmail, setTestingEmail] = useState(false);
+    const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null);
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -27,7 +30,15 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
             email: settings.email,
             bankName: settings.bankName,
             bankAccount: settings.bankAccount,
-            bankOwner: settings.bankOwner
+            bankOwner: settings.bankOwner,
+            // Email config
+            smtpHost: settings.smtpHost,
+            smtpPort: settings.smtpPort,
+            smtpUser: settings.smtpUser,
+            smtpPass: settings.smtpPass,
+            smtpFrom: settings.smtpFrom,
+            notifyEmails: settings.notifyEmails,
+            emailEnabled: settings.emailEnabled
         });
 
         if (res.success) {
@@ -39,10 +50,17 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
         setIsSaving(false);
     };
 
+    const handleTestEmail = async () => {
+        setTestingEmail(true);
+        setTestResult(null);
+        const result = await testEmailSettings();
+        setTestResult(result);
+        setTestingEmail(false);
+    };
+
     // Generate VietQR URL for bank transfer
     const getVietQRUrl = () => {
         if (!settings.bankAccount || !settings.bankName) return null;
-        // VietQR format: https://img.vietqr.io/image/{bank}-{account}-compact.png
         const bankCodes: Record<string, string> = {
             'Vietcombank': 'VCB',
             'VCB': 'VCB',
@@ -212,7 +230,136 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
                         </div>
                     )}
                 </CardContent>
-                <CardFooter>
+            </Card>
+
+            {/* Email Notification Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Mail className="h-5 w-5 text-blue-600" />
+                        Thông báo Email
+                    </CardTitle>
+                    <CardDescription>
+                        Cấu hình gửi email thông báo khi có đơn hàng mới từ Portal
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div>
+                            <p className="font-medium">Bật thông báo email</p>
+                            <p className="text-sm text-muted-foreground">Gửi email khi có đơn hàng mới</p>
+                        </div>
+                        <Switch
+                            checked={settings.emailEnabled}
+                            onCheckedChange={(checked) => setSettings({ ...settings, emailEnabled: checked })}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="smtpHost" className="flex items-center gap-2">
+                                <Server className="h-4 w-4" />
+                                SMTP Host
+                            </Label>
+                            <Input
+                                id="smtpHost"
+                                value={settings.smtpHost}
+                                onChange={e => setSettings({ ...settings, smtpHost: e.target.value })}
+                                placeholder="smtp.gmail.com"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="smtpPort">SMTP Port</Label>
+                            <Input
+                                id="smtpPort"
+                                type="number"
+                                value={settings.smtpPort}
+                                onChange={e => setSettings({ ...settings, smtpPort: parseInt(e.target.value) || 587 })}
+                                placeholder="587"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="smtpUser">SMTP User (Email đăng nhập)</Label>
+                        <Input
+                            id="smtpUser"
+                            value={settings.smtpUser}
+                            onChange={e => setSettings({ ...settings, smtpUser: e.target.value })}
+                            placeholder="your-email@gmail.com"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="smtpPass">SMTP Password / App Password</Label>
+                        <Input
+                            id="smtpPass"
+                            type="password"
+                            value={settings.smtpPass}
+                            onChange={e => setSettings({ ...settings, smtpPass: e.target.value })}
+                            placeholder="••••••••"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Gmail: dùng App Password (Cài đặt Google &gt; Bảo mật &gt; App Passwords)
+                        </p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="smtpFrom">Email gửi đi (From)</Label>
+                        <Input
+                            id="smtpFrom"
+                            value={settings.smtpFrom}
+                            onChange={e => setSettings({ ...settings, smtpFrom: e.target.value })}
+                            placeholder="shop@yourdomain.com (bỏ trống = dùng SMTP User)"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="notifyEmails" className="flex items-center gap-2">
+                            <Send className="h-4 w-4" />
+                            Email nhận thông báo
+                        </Label>
+                        <Input
+                            id="notifyEmails"
+                            value={settings.notifyEmails}
+                            onChange={e => setSettings({ ...settings, notifyEmails: e.target.value })}
+                            placeholder="email1@example.com, email2@example.com"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Nhiều email cách nhau bằng dấu phẩy
+                        </p>
+                    </div>
+
+                    {/* Test Email Button */}
+                    <div className="pt-2">
+                        <Button
+                            variant="outline"
+                            onClick={handleTestEmail}
+                            disabled={testingEmail || !settings.smtpHost || !settings.smtpUser}
+                        >
+                            <Send className="h-4 w-4 mr-2" />
+                            {testingEmail ? "Đang gửi..." : "Gửi email test"}
+                        </Button>
+                        {testResult && (
+                            <div className={`mt-2 p-2 rounded text-sm ${testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                {testResult.success ? (
+                                    <span className="flex items-center gap-1">
+                                        <Check className="h-4 w-4" /> Gửi thành công!
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1">
+                                        <AlertCircle className="h-4 w-4" /> {testResult.error}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Save Button Card */}
+            <Card>
+                <CardContent className="pt-6">
                     <Button onClick={handleSave} disabled={isSaving} className="w-full md:w-auto">
                         {saved ? (
                             <>
@@ -228,7 +375,7 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
                             </>
                         )}
                     </Button>
-                </CardFooter>
+                </CardContent>
             </Card>
 
             {/* Preview Card */}
@@ -257,4 +404,5 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
         </div>
     );
 }
+
 
