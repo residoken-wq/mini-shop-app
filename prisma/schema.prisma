@@ -220,3 +220,37 @@ model District {
   updatedAt   DateTime @updatedAt
 }
 
+// Promotion Module
+model Promotion {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products    PromotionProduct[]
+}
+
+model PromotionProduct {
+  id          String   @id @default(uuid())
+  promotionId String
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  tiers       PromotionTier[]
+
+  @@unique([promotionId, productId])
+}
+
+model PromotionTier {
+  id                 String           @id @default(uuid())
+  promotionProductId String
+  promotionProduct   PromotionProduct @relation(fields: [promotionProductId], references: [id], onDelete: Cascade)
+  minQuantity        Int
+  price              Float
+}
+

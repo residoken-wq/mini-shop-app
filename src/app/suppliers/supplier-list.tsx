@@ -8,7 +8,7 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
 import {
-    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash2, Plus, Search, MapPin, Phone, Truck, Loader2 } from "lucide-react";

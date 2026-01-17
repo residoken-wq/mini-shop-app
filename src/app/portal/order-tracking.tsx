@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -385,10 +386,13 @@ export default function OrderTracking() {
                                                         <div className="mt-3 p-3 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg text-center space-y-2">
                                                             <p className="text-xs text-gray-600">Quét mã để thanh toán</p>
                                                             {getVietQRUrl(order) && (
-                                                                <img
+                                                                <Image
                                                                     src={getVietQRUrl(order)!}
                                                                     alt="QR Code"
-                                                                    className="mx-auto w-48 h-48 rounded-lg shadow-md"
+                                                                    className="mx-auto rounded-lg shadow-md"
+                                                                    width={192}
+                                                                    height={192}
+                                                                    unoptimized
                                                                 />
                                                             )}
                                                             <div className="text-xs text-gray-600 space-y-1">

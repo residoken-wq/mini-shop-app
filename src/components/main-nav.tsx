@@ -12,7 +12,8 @@ import {
     Banknote,
     Users,
     Settings,
-    UserCircle
+    UserCircle,
+    Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -47,6 +48,12 @@ export function MainNav({ className, setOpen, ...props }: MainNavProps) {
             label: "Danh mục",
             icon: Package, // Reusing Package icon or maybe List/Tags
             active: pathname === "/categories",
+        },
+        {
+            href: "/promotions",
+            label: "Khuyến mãi",
+            icon: Tag,
+            active: pathname.startsWith("/promotions"),
         },
         {
             href: "/orders",
