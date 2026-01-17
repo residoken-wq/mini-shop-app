@@ -126,7 +126,9 @@ export function ProductSelection({
                 <div className="grid gap-3">
                     {sortedProducts.map((product) => {
                         const cartItem = cart.find((item) => item.product.id === product.id);
-                        const promoPrice = getPromotionPrice(product.id, cartItem?.quantity || 1);
+                        const ratio = product.saleUnit ? (product.saleRatio || 1) : 1;
+                        const baseQty = (cartItem?.quantity || 1) * ratio;
+                        const promoPrice = getPromotionPrice(product.id, baseQty);
 
                         return (
                             <ProductCard

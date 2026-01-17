@@ -8,7 +8,7 @@ import { getImageUrl } from "@/lib/image-utils";
 
 interface CartItemListProps {
     cart: CartItem[];
-    getCartItemPrice: (productId: string, quantity: number, displayPrice: number) => number;
+    getCartItemPrice: (product: Product, quantity: number) => number;
     onUpdateQuantity: (productId: string, delta: number) => void;
     onSetQuantity: (productId: string, qty: number) => void;
     onRemove: (productId: string) => void;
@@ -40,9 +40,8 @@ export function CartItemList({
             <div className="space-y-3">
                 {cart.map((item) => {
                     const effectivePrice = getCartItemPrice(
-                        item.product.id,
-                        item.quantity,
-                        item.product.displayPrice
+                        item.product,
+                        item.quantity
                     );
 
                     return (

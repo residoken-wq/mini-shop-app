@@ -135,7 +135,9 @@ export async function getPortalProducts(customerId?: string) {
             cost: true,
             unit: true,
             stock: true,
-            imageUrl: true
+            imageUrl: true,
+            saleUnit: true,
+            saleRatio: true
         }
     });
 

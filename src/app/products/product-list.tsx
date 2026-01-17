@@ -34,7 +34,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [mode, setMode] = useState<"CREATE" | "EDIT">("CREATE");
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "", unit: "kg", imageUrl: "" });
+    const [newProduct, setNewProduct] = useState({ name: "", categoryId: "", price: "", cost: "", stock: "", unit: "kg", imageUrl: "", saleUnit: "", saleRatio: "" });
 
     // Create Category State
 
@@ -86,7 +86,7 @@ export function ProductList({ initialProducts }: ProductListProps) {
 
     const handleOpenCreate = () => {
         setMode("CREATE");
-        setNewProduct({ name: "", categoryId: "", price: "", cost: "", stock: "", unit: "kg", imageUrl: "" });
+        setNewProduct({ name: "", categoryId: "", price: "", cost: "", stock: "", unit: "kg", imageUrl: "", saleUnit: "", saleRatio: "" });
         setIsCreateOpen(true);
     };
 
@@ -100,7 +100,9 @@ export function ProductList({ initialProducts }: ProductListProps) {
             cost: p.cost.toString(),
             stock: p.stock.toString(),
             unit: p.unit || "kg",
-            imageUrl: p.imageUrl || ""
+            imageUrl: p.imageUrl || "",
+            saleUnit: p.saleUnit || "",
+            saleRatio: p.saleRatio ? p.saleRatio.toString() : ""
         });
         setIsCreateOpen(true);
     };
@@ -119,7 +121,9 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 cost: parseFloat(newProduct.cost) || 0,
                 stock: parseInt(newProduct.stock) || 0,
                 unit: newProduct.unit,
-                imageUrl: newProduct.imageUrl
+                imageUrl: newProduct.imageUrl,
+                saleUnit: newProduct.saleUnit,
+                saleRatio: parseFloat(newProduct.saleRatio) || 1
             });
 
             if (res.success && res.product) {
@@ -136,7 +140,10 @@ export function ProductList({ initialProducts }: ProductListProps) {
                 price: parseFloat(newProduct.price) || 0,
                 cost: parseFloat(newProduct.cost) || 0,
                 // stock: // Stock not updated here
-                imageUrl: newProduct.imageUrl
+                imageUrl: newProduct.imageUrl,
+                saleUnit: newProduct.saleUnit,
+                saleRatio: parseFloat(newProduct.saleRatio) || 1,
+                unit: newProduct.unit
             });
 
             if (res.success && res.product) {
@@ -452,24 +459,54 @@ export function ProductList({ initialProducts }: ProductListProps) {
                                     </div>
 
                                     {/* Unit */}
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium">Đơn vị tính</Label>
-                                        <select
-                                            className="w-full flex h-11 items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                                            value={newProduct.unit}
-                                            onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })}
-                                        >
-                                            <option value="kg">⚖️ Kilogram (kg)</option>
-                                            <option value="g">⚖️ Gram (g)</option>
-                                            <option value="bó">🌿 Bó</option>
-                                            <option value="cái">📦 Cái</option>
-                                            <option value="hộp">📦 Hộp</option>
-                                            <option value="gói">📦 Gói</option>
-                                            <option value="chai">🍾 Chai</option>
-                                            <option value="lon">🥫 Lon</option>
-                                            <option value="túi">👜 Túi</option>
-                                            <option value="khay">📋 Khay</option>
-                                        </select>
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Đơn vị kho (Base)</Label>
+                                            <select
+                                                className="w-full flex h-11 items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                                                value={newProduct.unit}
+                                                onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })}
+                                            >
+                                                <option value="kg">⚖️ Kilogram (kg)</option>
+                                                <option value="g">⚖️ Gram (g)</option>
+                                                <option value="bó">🌿 Bó</option>
+                                                <option value="cái">📦 Cái</option>
+                                                <option value="hộp">📦 Hộp</option>
+                                                <option value="gói">📦 Gói</option>
+                                                <option value="chai">🍾 Chai</option>
+                                                <option value="lon">🥫 Lon</option>
+                                                <option value="túi">👜 Túi</option>
+                                                <option value="khay">📋 Khay</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                            <div className="col-span-2 text-xs font-semibold text-blue-800 uppercase tracking-wide mb-1">
+                                                Đơn vị bán Portal
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs">Đơn vị (VD: Trái)</Label>
+                                                <Input
+                                                    value={newProduct.saleUnit || ""}
+                                                    onChange={e => setNewProduct({ ...newProduct, saleUnit: e.target.value })}
+                                                    placeholder="Để trống nếu giống kho"
+                                                    className="h-9 text-sm"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs">Quy đổi (1 Unit ≈ ? kg)</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={newProduct.saleRatio || ""}
+                                                    onChange={e => setNewProduct({ ...newProduct, saleRatio: e.target.value })}
+                                                    placeholder="1"
+                                                    className="h-9 text-sm"
+                                                />
+                                            </div>
+                                            <p className="col-span-2 text-[10px] text-blue-600 italic">
+                                                * Dùng cho khách đặt trên Portal (VD: Đặt theo Trái, kho tính Kg)
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 

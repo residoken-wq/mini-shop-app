@@ -20,6 +20,8 @@ export interface Product {
     displayPrice: number;
     isExpired: boolean;
     hasWholesalePrice: boolean;
+    saleUnit?: string | null;
+    saleRatio?: number | null;
 }
 
 // Cart item type

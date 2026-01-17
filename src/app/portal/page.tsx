@@ -139,7 +139,7 @@ export default function PortalPage() {
                 items: cart.map((item) => ({
                     productId: item.product.id,
                     quantity: item.quantity,
-                    price: getCartItemPrice(item.product.id, item.quantity, item.product.displayPrice),
+                    price: getCartItemPrice(item.product, item.quantity),
                 })),
                 deliveryMethod: formData.deliveryMethod,
                 recipientName: formData.recipientName,

@@ -30,7 +30,20 @@ export function ProductCard({
 }: ProductCardProps) {
     const inCart = cartItem !== undefined;
     const quantity = cartItem?.quantity || 0;
-    const effectivePrice = promotionPrice !== null ? promotionPrice : product.displayPrice;
+
+    // Base Price (per kg/base unit)
+    const basePrice = promotionPrice !== null ? promotionPrice : product.displayPrice;
+
+    // Determine Display Unit and Price
+    const hasSaleUnit = !!product.saleUnit;
+    const displayUnit = hasSaleUnit ? product.saleUnit : product.unit;
+    const ratio = hasSaleUnit ? (product.saleRatio || 1) : 1;
+
+    // Price per Display Unit (Estimated if ratio != 1)
+    const displayPrice = basePrice * ratio;
+
+    // Total Estimation
+    const totalEstimate = displayPrice * quantity;
 
     return (
         <div className={`bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all ${product.isExpired ? "border-2 border-red-300 bg-red-50" : ""}`}>
@@ -70,23 +83,28 @@ export function ProductCard({
 
             {/* Price + Actions Row */}
             <div className="mt-3 flex items-center justify-between">
-                {/* Price */}
+                {/* Price Display */}
                 <div>
-                    {promotionPrice !== null ? (
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-lg text-green-600">
-                                {formatCurrency(promotionPrice)}đ
-                            </span>
-                            <span className="text-sm text-gray-400 line-through">
-                                {formatCurrency(product.displayPrice)}đ
-                            </span>
-                        </div>
-                    ) : (
-                        <span className="font-bold text-lg text-purple-600">
-                            {formatCurrency(product.displayPrice)}đ
+                    <div className="flex items-center gap-1">
+                        <span className={cn("font-bold text-lg", promotionPrice !== null ? "text-green-600" : "text-purple-600")}>
+                            {formatCurrency(displayPrice)}đ
                         </span>
+                        <span className="text-xs text-gray-500">/{displayUnit}</span>
+                    </div>
+
+                    {/* Secondary/Base Price Info if using Sale Unit */}
+                    {hasSaleUnit && (
+                        <div className="text-[10px] text-gray-400">
+                            (≈ {ratio} {product.unit}) • {formatCurrency(basePrice)}đ/{product.unit}
+                        </div>
                     )}
-                    <span className="text-xs text-gray-500">/{product.unit}</span>
+
+                    {/* Original Price Strikethrough if Promotion */}
+                    {promotionPrice !== null && (
+                        <div className="text-xs text-gray-400 line-through">
+                            {formatCurrency(product.displayPrice * ratio)}đ
+                        </div>
+                    )}
                 </div>
 
                 {/* Cart Actions */}
@@ -139,12 +157,17 @@ export function ProductCard({
             {/* Total if in cart */}
             {inCart && (
                 <div className="mt-2 pt-2 border-t flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Thành tiền:</span>
+                    <span className="text-sm text-gray-500">Tạm tính{hasSaleUnit ? "*" : ""}:</span>
                     <span className="font-bold text-purple-600">
-                        {formatCurrency(effectivePrice * quantity)}đ
+                        {formatCurrency(totalEstimate)}đ
                     </span>
                 </div>
             )}
         </div>
     );
+}
+
+// Helper for classNames (simple version or import from utils)
+function cn(...classes: (string | undefined | null | false)[]) {
+    return classes.filter(Boolean).join(" ");
 }

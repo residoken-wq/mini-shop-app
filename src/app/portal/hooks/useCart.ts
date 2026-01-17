@@ -17,7 +17,7 @@ interface UseCartReturn {
     getProductTotal: () => number;
     getProductTotalWithPromo: () => number;
     getFinalTotal: (shippingFee: number) => number;
-    getCartItemPrice: (productId: string, quantity: number, displayPrice: number) => number;
+    getCartItemPrice: (product: Product, quantity: number) => number;
     getPromotionPrice: (productId: string, quantity: number) => number | null;
     getActivePromotionForProduct: (productId: string) => { promo: Promotion; promoProduct: PromotionProduct } | null;
     hasExpiredItems: boolean;
@@ -55,10 +55,7 @@ export function useCart({ promotions }: UseCartProps): UseCartReturn {
     }, [getActivePromotionForProduct]);
 
     // Get the effective price for a cart item (promotion price or displayPrice)
-    const getCartItemPrice = useCallback((productId: string, quantity: number, displayPrice: number): number => {
-        const promoPrice = getPromotionPrice(productId, quantity);
-        return promoPrice !== null ? promoPrice : displayPrice;
-    }, [getPromotionPrice]);
+
 
     const addToCart = useCallback((product: Product) => {
         setCart(prevCart => {
@@ -106,13 +103,25 @@ export function useCart({ promotions }: UseCartProps): UseCartReturn {
     }, []);
 
     const getProductTotal = useCallback(() => {
-        return cart.reduce((sum, item) => sum + (item.product.displayPrice * item.quantity), 0);
+        return cart.reduce((sum, item) => {
+            const ratio = item.product.saleUnit ? (item.product.saleRatio || 1) : 1;
+            return sum + (item.product.displayPrice * ratio * item.quantity);
+        }, 0);
     }, [cart]);
+
+    // Get the effective price for a cart item (per item unit, accounting for sale ratio)
+    const getCartItemPrice = useCallback((product: Product, quantity: number): number => {
+        const ratio = product.saleUnit ? (product.saleRatio || 1) : 1;
+        const baseQty = quantity * ratio;
+        const promoPrice = getPromotionPrice(product.id, baseQty);
+        const basePrice = promoPrice !== null ? promoPrice : product.displayPrice;
+        return basePrice * ratio;
+    }, [getPromotionPrice]);
 
     // Calculate cart total with promotion prices
     const getProductTotalWithPromo = useCallback(() => {
         return cart.reduce((sum, item) => {
-            const price = getCartItemPrice(item.product.id, item.quantity, item.product.displayPrice);
+            const price = getCartItemPrice(item.product, item.quantity);
             return sum + (price * item.quantity);
         }, 0);
     }, [cart, getCartItemPrice]);

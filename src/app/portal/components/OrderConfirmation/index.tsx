@@ -36,7 +36,7 @@ interface OrderConfirmationProps {
     onSetQuantity: (productId: string, qty: number) => void;
     onRemoveFromCart: (productId: string) => void;
     onSubmit: () => void;
-    getCartItemPrice: (productId: string, quantity: number, displayPrice: number) => number;
+    getCartItemPrice: (product: Product, quantity: number) => number;
 }
 
 export function OrderConfirmation({
