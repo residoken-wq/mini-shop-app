@@ -55,7 +55,9 @@ export default function PurchaseHistory({ initialOrders, suppliers }: PurchaseHi
 
         const result = await paySupplierDebt({
             supplierId: payDebtSupplier.id,
-            amount: amount
+            amount: amount,
+            paymentMethod: "CASH",
+            date: new Date()
         });
 
         if (result.success) {
