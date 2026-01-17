@@ -240,3 +240,38 @@ export async function deleteDistrict(id: string) {
         return { success: false, error: "Lỗi xóa quận/huyện" };
     }
 }
+
+// ============ MESSAGE TEMPLATES ============
+
+export async function updateMessageTemplates(data: {
+    smsShippingTemplate: string;
+    smsDeliveredTemplate: string;
+}) {
+    try {
+        await db.shopSettings.update({
+            where: { id: "shop" },
+            data: {
+                smsShippingTemplate: data.smsShippingTemplate,
+                smsDeliveredTemplate: data.smsDeliveredTemplate,
+            }
+        });
+        revalidatePath("/settings");
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Update message templates error:", error);
+        return { success: false, error: "Lỗi cập nhật mẫu tin nhắn" };
+    }
+}
+
+export async function getMessageTemplates() {
+    const settings = await db.shopSettings.findUnique({
+        where: { id: "shop" },
+        select: {
+            smsShippingTemplate: true,
+            smsDeliveredTemplate: true,
+            name: true,
+        }
+    });
+    return settings;
+}

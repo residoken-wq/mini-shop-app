@@ -494,3 +494,135 @@ export async function completeDelivery(orderId: string, data: {
     }
 }
 
+// ============ MESSAGE NOTIFICATIONS ============
+
+interface MessageSendResult {
+    success: boolean;
+    message?: string;
+    error?: string;
+}
+
+async function getMessageTemplate(templateType: "shipping" | "delivered") {
+    const settings = await db.shopSettings.findUnique({
+        where: { id: "shop" },
+        select: {
+            smsShippingTemplate: true,
+            smsDeliveredTemplate: true,
+            name: true,
+        }
+    });
+    return {
+        template: templateType === "shipping"
+            ? settings?.smsShippingTemplate
+            : settings?.smsDeliveredTemplate,
+        shopName: settings?.name || "Shop"
+    };
+}
+
+function formatMessage(template: string, data: Record<string, string>): string {
+    let result = template;
+    for (const [key, value] of Object.entries(data)) {
+        result = result.replace(new RegExp(`{{${key}}}`, 'g'), value || "");
+    }
+    return result;
+}
+
+export async function sendShippingNotification(orderId: string): Promise<MessageSendResult> {
+    try {
+        const order = await db.order.findUnique({
+            where: { id: orderId },
+            include: { customer: true }
+        });
+
+        if (!order) return { success: false, error: "Đơn hàng không tồn tại" };
+        if (!order.recipientPhone && !order.customer?.phone) {
+            return { success: false, error: "Không có số điện thoại khách hàng" };
+        }
+
+        const { template, shopName } = await getMessageTemplate("shipping");
+        if (!template) return { success: false, error: "Chưa cấu hình mẫu tin nhắn" };
+
+        const phone = order.recipientPhone || order.customer?.phones?.[0] || order.customer?.phone || "";
+        const customerName = order.recipientName || order.customer?.name || "Quý khách";
+        const address = order.deliveryAddress || "";
+
+        const formattedMessage = formatMessage(template, {
+            customerName,
+            orderCode: order.code,
+            address,
+            total: order.total.toLocaleString("vi-VN"),
+            shopName,
+            phone
+        });
+
+        // Open Zalo with pre-filled message (using Zalo URL scheme)
+        const zaloUrl = `https://zalo.me/${phone.replace(/\D/g, '')}`;
+
+        // Update order to mark notification as sent
+        await db.order.update({
+            where: { id: orderId },
+            data: {
+                lastNotificationAt: new Date(),
+                lastNotificationType: "SHIPPING"
+            }
+        });
+
+        revalidatePath("/orders");
+
+        return {
+            success: true,
+            message: formattedMessage
+        };
+    } catch (error) {
+        console.error("Send shipping notification error:", error);
+        return { success: false, error: "Lỗi gửi tin nhắn" };
+    }
+}
+
+export async function sendDeliveredNotification(orderId: string): Promise<MessageSendResult> {
+    try {
+        const order = await db.order.findUnique({
+            where: { id: orderId },
+            include: { customer: true }
+        });
+
+        if (!order) return { success: false, error: "Đơn hàng không tồn tại" };
+        if (!order.recipientPhone && !order.customer?.phone) {
+            return { success: false, error: "Không có số điện thoại khách hàng" };
+        }
+
+        const { template, shopName } = await getMessageTemplate("delivered");
+        if (!template) return { success: false, error: "Chưa cấu hình mẫu tin nhắn" };
+
+        const phone = order.recipientPhone || order.customer?.phones?.[0] || order.customer?.phone || "";
+        const customerName = order.recipientName || order.customer?.name || "Quý khách";
+
+        const formattedMessage = formatMessage(template, {
+            customerName,
+            orderCode: order.code,
+            address: order.deliveryAddress || "",
+            total: order.total.toLocaleString("vi-VN"),
+            shopName,
+            phone
+        });
+
+        // Update order to mark notification as sent
+        await db.order.update({
+            where: { id: orderId },
+            data: {
+                lastNotificationAt: new Date(),
+                lastNotificationType: "DELIVERED"
+            }
+        });
+
+        revalidatePath("/orders");
+
+        return {
+            success: true,
+            message: formattedMessage
+        };
+    } catch (error) {
+        console.error("Send delivered notification error:", error);
+        return { success: false, error: "Lỗi gửi tin nhắn" };
+    }
+}

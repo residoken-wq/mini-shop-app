@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Plus, Trash2, Search, Check } from "lucide-react";
+import { Plus, Trash2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
@@ -17,7 +14,12 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
 import { createPromotion, updatePromotion } from "@/app/promotions/actions";
-import { Product } from "@prisma/client";
+
+interface Product {
+    id: string;
+    name: string;
+    price: number;
+}
 
 interface PromotionFormProps {
     initialData?: any;
@@ -208,10 +210,12 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
                 </div>
                 <div className="flex items-end pb-2">
                     <div className="flex items-center space-x-2">
-                        <Checkbox
+                        <input
+                            type="checkbox"
                             id="isActive"
                             checked={isActive}
-                            onCheckedChange={(c) => setIsActive(c === true)}
+                            onChange={(e) => setIsActive(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300"
                         />
                         <Label htmlFor="isActive" className="cursor-pointer">Kích hoạt ngay</Label>
                     </div>
@@ -240,7 +244,7 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
 
                 <div className="col-span-2 space-y-2">
                     <Label htmlFor="description">Mô tả</Label>
-                    <Textarea
+                    <Input
                         id="description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}

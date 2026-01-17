@@ -147,6 +147,10 @@ model Order {
   supplierId String?
   supplier   Supplier? @relation("SupplierOrders", fields: [supplierId], references: [id])
 
+  // Notification tracking
+  lastNotificationAt   DateTime?
+  lastNotificationType String?   // "SHIPPING", "DELIVERED"
+
   items     OrderItem[]
 }
 
@@ -208,6 +212,11 @@ model ShopSettings {
   smtpFrom       String   @default("")
   notifyEmails   String   @default("")  // Comma-separated emails
   emailEnabled   Boolean  @default(false)
+  
+  // SMS/Zalo Message Templates
+  smsShippingTemplate  String   @default("Chào {{customerName}}, đơn hàng {{orderCode}} đang được giao đến địa chỉ {{address}}. Tổng tiền: {{total}}đ. Xin cảm ơn!")
+  smsDeliveredTemplate String   @default("Đơn hàng {{orderCode}} đã giao thành công. Cảm ơn bạn đã mua hàng tại {{shopName}}!")
+  
   updatedAt   DateTime @updatedAt
 }
 

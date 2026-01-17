@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { Plus, Edit, Trash2, Tag, Calendar, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,8 +63,8 @@ export default async function PromotionsPage() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col text-sm">
-                                                <span className="text-gray-500">Bắt đầu: {format(new Date(p.startDate), "dd/MM/yyyy")}</span>
-                                                <span className="text-gray-500">Kết thúc: {format(new Date(p.endDate), "dd/MM/yyyy")}</span>
+                                                <span className="text-gray-500">Bắt đầu: {new Date(p.startDate).toLocaleDateString("vi-VN")}</span>
+                                                <span className="text-gray-500">Kết thúc: {new Date(p.endDate).toLocaleDateString("vi-VN")}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
