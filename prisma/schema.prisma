@@ -47,6 +47,7 @@ model Product {
   orderItems OrderItem[]
   inventoryTransactions InventoryTransaction[]
   wholesalePrices WholesalePrice[]
+  promotionProducts PromotionProduct[]
 }
 
 model Customer {
