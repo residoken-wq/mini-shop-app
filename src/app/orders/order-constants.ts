@@ -4,7 +4,8 @@ export const ORDER_STATUSES = {
     PROCESSING: { label: "Đang xử lý", color: "blue", step: 2 },
     READY: { label: "Đủ hàng", color: "purple", step: 3 },
     SHIPPING: { label: "Đang giao", color: "orange", step: 4 },
-    COMPLETED: { label: "Hoàn tất", color: "green", step: 5 },
+    DELIVERED: { label: "Đã giao - Chờ TT", color: "teal", step: 5 },
+    COMPLETED: { label: "Hoàn tất", color: "green", step: 6 },
     CANCELLED: { label: "Đã hủy", color: "red", step: 0 },
 } as const;
 
@@ -12,7 +13,7 @@ export type OrderStatus = keyof typeof ORDER_STATUSES;
 
 // Helper functions (sync)
 export function getNextStatus(currentStatus: string): OrderStatus | null {
-    const flow: OrderStatus[] = ["PENDING", "PROCESSING", "READY", "SHIPPING", "COMPLETED"];
+    const flow: OrderStatus[] = ["PENDING", "PROCESSING", "READY", "SHIPPING", "DELIVERED", "COMPLETED"];
     const currentIndex = flow.indexOf(currentStatus as OrderStatus);
     if (currentIndex === -1 || currentIndex >= flow.length - 1) return null;
     return flow[currentIndex + 1];
@@ -27,8 +28,11 @@ export function getAllowedNextStatuses(currentStatus: string): OrderStatus[] {
         case "READY":
             return ["SHIPPING"];
         case "SHIPPING":
+            return ["DELIVERED"];
+        case "DELIVERED":
             return ["COMPLETED"];
         default:
             return [];
     }
 }
+

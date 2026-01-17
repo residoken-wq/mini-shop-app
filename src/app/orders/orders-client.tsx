@@ -15,6 +15,7 @@ import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-con
 import { OrderReceipt } from "./order-receipt";
 import { OrderEditableItems } from "./order-editable-items";
 import { PendingOrdersPreparation } from "./pending-orders-preparation";
+import { ShippingOrdersList } from "./shipping-orders-list";
 import { ShippingDialog } from "./shipping-dialog";
 import { DeliveryDialog } from "./delivery-dialog";
 import html2canvas from "html2canvas";
@@ -37,6 +38,7 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
     const [isPrinting, setIsPrinting] = useState(false);
     const [viewMode, setViewMode] = useState<"receipt" | "edit">("receipt");
     const [showPreparation, setShowPreparation] = useState(false);
+    const [showShippingList, setShowShippingList] = useState(false);
     const [showShippingDialog, setShowShippingDialog] = useState(false);
     const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
     const receiptRef = useRef<HTMLDivElement>(null);
@@ -166,12 +168,25 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                         <Package className="h-4 w-4 mr-2" />
                         Chuẩn bị hàng
                     </Button>
+                    <Button
+                        variant={showShippingList ? "default" : "outline"}
+                        onClick={() => setShowShippingList(!showShippingList)}
+                        className={showShippingList ? "bg-orange-600 hover:bg-orange-700" : ""}
+                    >
+                        <Truck className="h-4 w-4 mr-2" />
+                        Giao hàng
+                    </Button>
                 </div>
             </div>
 
             {/* Pending Orders Preparation Section */}
             {showPreparation && (
                 <PendingOrdersPreparation onOrderUpdated={refreshOrders} />
+            )}
+
+            {/* Shipping Orders Section */}
+            {showShippingList && (
+                <ShippingOrdersList onOrderUpdated={refreshOrders} />
             )}
 
             {/* Stats Cards */}
