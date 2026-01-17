@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Save, X, Percent, DollarSign, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { updateOrderItem, updateOrderDiscount, deleteOrderItem } from "./actions";
+import { updateOrderItem, updateOrderDiscount, deleteOrderItem, getCarriers, updateOrderCarrierInfo, createCarrier } from "./actions";
 
 type OrderItemWithProduct = OrderItem & { product: Product };
 
@@ -15,20 +15,47 @@ interface OrderEditableItemsProps {
     orderId: string;
     items: OrderItemWithProduct[];
     discount: number;
+    shippingFee?: number;
+    carrierName?: string;
+    type: "SALE" | "PURCHASE";
     status: string;
     onUpdate: () => void;
 }
 
 const NON_EDITABLE_STATUSES = ["SHIPPING", "COMPLETED"];
 
-export function OrderEditableItems({ orderId, items, discount, status, onUpdate }: OrderEditableItemsProps) {
+export function OrderEditableItems({ orderId, items, discount, shippingFee = 0, carrierName, type, status, onUpdate }: OrderEditableItemsProps) {
     const [editingItems, setEditingItems] = useState<Record<string, { quantity: number; price: number; unit?: string }>>({});
     const [currentDiscount, setCurrentDiscount] = useState(discount);
     const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
     const [discountPercent, setDiscountPercent] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Shipping State (PO Only)
+    const [carriers, setCarriers] = useState<{ id: string; name: string }[]>([]);
+    const [selectedCarrierId, setSelectedCarrierId] = useState("");
+    const [shippingCost, setShippingCost] = useState(shippingFee);
+    const [createPayment, setCreatePayment] = useState(false); // Default: Record Debt
+    const [isNewCarrier, setIsNewCarrier] = useState(false);
+    const [newCarrierName, setNewCarrierName] = useState("");
+
     const isEditable = !NON_EDITABLE_STATUSES.includes(status);
+
+    // Load carriers on mount if PO
+    useEffect(() => {
+        if (type === "PURCHASE") {
+            getCarriers().then(result => {
+                if (result.success && result.carriers) {
+                    setCarriers(result.carriers);
+                    // Try to match existing carrierName if any
+                    if (carrierName) {
+                        const existing = result.carriers.find(c => c.name === carrierName);
+                        if (existing) setSelectedCarrierId(existing.id);
+                    }
+                }
+            });
+        }
+    }, [type, carrierName]); // Dependency on carrierName to pre-select
 
     const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN').format(value);
 
@@ -117,6 +144,48 @@ export function OrderEditableItems({ orderId, items, discount, status, onUpdate 
         }
         setIsSaving(false);
     };
+
+    const handleSaveShipping = async () => {
+        if (!selectedCarrierId && !isNewCarrier) {
+            alert("Vui lòng chọn nhà vận chuyển");
+            return;
+        }
+
+        setIsSaving(true);
+        let carrierIdToUse = selectedCarrierId;
+
+        // Validating
+        if (isNewCarrier) {
+            if (!newCarrierName.trim()) {
+                alert("Vui lòng nhập tên nhà vận chuyển mới");
+                setIsSaving(false);
+                return;
+            }
+            const createRes = await createCarrier(newCarrierName);
+            if (!createRes.success || !createRes.carrier) {
+                alert("Lỗi tạo nhà vận chuyển mới");
+                setIsSaving(false);
+                return;
+            }
+            carrierIdToUse = createRes.carrier.id;
+        }
+
+        const result = await updateOrderCarrierInfo(orderId, {
+            carrierId: carrierIdToUse,
+            shippingFee: shippingCost,
+            createPayment
+        });
+
+        if (result.success) {
+            onUpdate();
+        } else {
+            alert(result.error || "Lỗi cập nhật vận chuyển");
+        }
+        setIsSaving(false);
+    };
+
+    // ... (render)
+
 
     return (
         <div className="space-y-4">
@@ -311,6 +380,88 @@ export function OrderEditableItems({ orderId, items, discount, status, onUpdate 
                         <Button onClick={handleSaveDiscount} disabled={isSaving}>
                             <Save className="w-4 h-4 mr-1" />
                             Lưu
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Shipping Section (PO Only) */}
+            {isEditable && type === "PURCHASE" && (
+                <div className="border rounded-lg p-3 bg-blue-50">
+                    <p className="text-sm font-medium text-blue-700 mb-2">🚚 Vận chuyển & Thanh toán</p>
+
+                    <div className="space-y-3">
+                        {/* Carrier Select */}
+                        <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Nhà vận chuyển</label>
+                            {isNewCarrier ? (
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={newCarrierName}
+                                        onChange={(e) => setNewCarrierName(e.target.value)}
+                                        placeholder="Tên nhà vận chuyển mới"
+                                        className="h-8 text-sm"
+                                    />
+                                    <Button size="sm" variant="ghost" onClick={() => setIsNewCarrier(false)}>
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <select
+                                        className="flex-1 h-8 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        value={selectedCarrierId}
+                                        onChange={(e) => {
+                                            if (e.target.value === "new") {
+                                                setIsNewCarrier(true);
+                                                setSelectedCarrierId("");
+                                            } else {
+                                                setSelectedCarrierId(e.target.value);
+                                            }
+                                        }}
+                                    >
+                                        <option value="">-- Chọn nhà vận chuyển --</option>
+                                        {/* Assuming 'carriers' is an array of carrier objects available in scope */}
+                                        {/* For example: {carriers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))} */}
+                                        <option value="new">+ Thêm mới</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Shipping Fee */}
+                        <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Phí vận chuyển</label>
+                            <Input
+                                type="number"
+                                value={shippingCost}
+                                onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
+                                className="h-8 text-sm"
+                            />
+                        </div>
+
+                        {/* Payment Option */}
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="createPayment"
+                                checked={createPayment}
+                                onChange={(e) => setCreatePayment(e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <label htmlFor="createPayment" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Tạo phiếu chi ngay (Tiền mặt)
+                            </label>
+                        </div>
+                        <p className="text-xs text-gray-500 ml-6">
+                            {createPayment
+                                ? "Sẽ tạo phiếu chi tiền mặt ngay lập tức."
+                                : "Sẽ ghi nhận công nợ cho nhà vận chuyển."}
+                        </p>
+
+                        <Button onClick={handleSaveShipping} disabled={isSaving} className="w-full bg-blue-600 hover:bg-blue-700">
+                            <Save className="w-4 h-4 mr-1" />
+                            Lưu thông tin vận chuyển
                         </Button>
                     </div>
                 </div>

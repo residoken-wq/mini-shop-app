@@ -393,6 +393,74 @@ export async function createCarrier(name: string, phone?: string) {
     }
 }
 
+// Update shipping info (Carrier & Fee) for Purchase Orders
+export async function updateOrderCarrierInfo(orderId: string, data: {
+    carrierId: string; // Carrier ID from DB
+    shippingFee: number;
+    createPayment: boolean; // If true -> Create Transaction, else -> Record Debt
+}) {
+    try {
+        const order = await db.order.findUnique({ where: { id: orderId } });
+        if (!order) return { success: false, error: "Order not found" };
+
+        const carrier = await db.carrier.findUnique({ where: { id: data.carrierId } });
+        if (!carrier) return { success: false, error: "Carrier not found" };
+
+        // 1. Update Order
+        await db.order.update({
+            where: { id: orderId },
+            data: {
+                carrierName: carrier.name,
+                shippingFee: data.shippingFee,
+                shippingPaidBy: "SHOP", // For PO, shop pays shipping (expense)
+            }
+        });
+
+        // 2. Handle Debt or Payment
+        if (data.createPayment) {
+            // Create Expense Transaction
+            await db.transaction.create({
+                data: {
+                    type: "EXPENSE",
+                    amount: data.shippingFee,
+                    description: `Chi phí vận chuyển đơn hàng #${order.code}`,
+                    carrierId: data.carrierId,
+                    isPaid: true,
+                    paidAt: new Date(),
+                    paymentMethod: "CASH" // Default to CASH for now
+                }
+            });
+            // Debt does not increase because we paid immediately
+        } else {
+            // Record Debt
+            await db.carrier.update({
+                where: { id: data.carrierId },
+                data: { debt: { increment: data.shippingFee } }
+            });
+
+            // Optionally create a DEBT transaction record if we want to track history?
+            // For now, simple model: Carrier.debt is the source of truth, 
+            // but usually we want a Transaction record for "Cost incurred".
+            // Let's create an Unpaid Transaction to track the expense
+            await db.transaction.create({
+                data: {
+                    type: "EXPENSE",
+                    amount: data.shippingFee,
+                    description: `Phí vận chuyển đơn hàng #${order.code} (Ghi nợ)`,
+                    carrierId: data.carrierId,
+                    isPaid: false
+                }
+            });
+        }
+
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update carrier info:", error);
+        return { success: false, error: "Failed to update carrier info" };
+    }
+}
+
 // ============ SHIPPING WORKFLOW ============
 
 // Start shipping - from READY to SHIPPING

@@ -504,6 +504,9 @@ export function OrdersClient({ initialOrders, expensesTotal }: OrdersClientProps
                                     orderId={selectedOrder.id}
                                     items={selectedOrder.items}
                                     discount={(selectedOrder as any).discount || 0}
+                                    shippingFee={selectedOrder.shippingFee || 0}
+                                    carrierName={selectedOrder.carrierName || undefined}
+                                    type={selectedOrder.type as "SALE" | "PURCHASE"}
                                     status={selectedOrder.status}
                                     onUpdate={refreshOrders}
                                 />

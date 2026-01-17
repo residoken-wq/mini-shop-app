@@ -103,8 +103,11 @@ model Carrier {
   id        String   @id @default(uuid())
   name      String   // e.g. "Giao hàng nhanh", "Grab", "Tự giao"
   phone     String?
+  debt      Float    @default(0)   // Công nợ nhà vận chuyển
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  transactions Transaction[]
 }
 
 model Order {
@@ -187,6 +190,9 @@ model Transaction {
   supplierId  String?
   supplier    Supplier? @relation(fields: [supplierId], references: [id])
   
+  carrierId   String?
+  carrier     Carrier?  @relation(fields: [carrierId], references: [id])
+
   paymentMethod String? // "CASH", "BANK", etc.
 }
 
