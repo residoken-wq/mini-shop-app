@@ -1143,7 +1143,7 @@ export default function PortalPage() {
                                     <p className="text-sm font-medium text-blue-700 mb-3">Quét mã để chuyển khoản</p>
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                        src={`https://img.vietqr.io/image/${bankInfo.bankName}-${bankInfo.bankAccount}-compact2.png?amount=${getCartTotal()}&addInfo=${encodeURIComponent(`Thanh toan don hang`)}&accountName=${encodeURIComponent(bankInfo.bankOwner)}`}
+                                        src={`https://img.vietqr.io/image/${bankInfo.bankName}-${bankInfo.bankAccount}-compact2.png?amount=${getFinalTotal()}&addInfo=${encodeURIComponent(`Thanh toan don hang`)}&accountName=${encodeURIComponent(bankInfo.bankOwner)}`}
                                         alt="QR Code"
                                         className="w-48 h-48 mx-auto rounded-lg border shadow-sm bg-white"
                                         onError={(e) => {
@@ -1154,7 +1154,7 @@ export default function PortalPage() {
                                         <p><strong>Ngân hàng:</strong> {bankInfo.bankName}</p>
                                         <p><strong>Số TK:</strong> {bankInfo.bankAccount}</p>
                                         <p><strong>Chủ TK:</strong> {bankInfo.bankOwner}</p>
-                                        <p className="text-purple-600 font-bold">Số tiền: {formatCurrency(getCartTotal())}đ</p>
+                                        <p className="text-purple-600 font-bold">Số tiền: {formatCurrency(getFinalTotal())}đ</p>
                                     </div>
                                 </div>
                             </div>
