@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/table";
 import { getPromotions, deletePromotion } from "./actions";
 
+export const dynamic = 'force-dynamic';
+
 export default async function PromotionsPage() {
     const { data: promotions } = await getPromotions();
 
