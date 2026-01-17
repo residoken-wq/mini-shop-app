@@ -312,7 +312,7 @@ export function ShippingOrdersList({ onOrderUpdated }: ShippingOrdersListProps) 
                             </Button>
                         </div>
                         <p className="text-xs text-gray-500 text-center">
-                            Nhấn "Copy tin nhắn" rồi dán vào Zalo để gửi cho khách
+                            Nhấn &quot;Copy tin nhắn&quot; rồi dán vào Zalo để gửi cho khách
                         </p>
                     </div>
                 </DialogContent>
