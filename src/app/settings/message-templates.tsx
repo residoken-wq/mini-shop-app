@@ -4,9 +4,8 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { MessageCircle, Save, Check, Info } from "lucide-react";
-import { updateMessageTemplates, getShopSettings } from "./actions";
+import { updateMessageTemplates } from "./actions";
 
 interface MessageTemplatesProps {
     initialShippingTemplate: string;
@@ -87,13 +86,13 @@ export function MessageTemplates({ initialShippingTemplate, initialDeliveredTemp
                     <Label htmlFor="shippingTemplate" className="text-base font-medium">
                         🚚 Tin nhắn khi BẮT ĐẦU giao hàng
                     </Label>
-                    <Textarea
+                    <textarea
                         id="shippingTemplate"
                         value={shippingTemplate}
                         onChange={(e) => setShippingTemplate(e.target.value)}
                         placeholder="Nhập mẫu tin nhắn..."
                         rows={4}
-                        className="font-mono text-sm"
+                        className="w-full font-mono text-sm p-2 border rounded-md"
                     />
                     <div className="flex gap-1 flex-wrap">
                         {TEMPLATE_VARIABLES.slice(0, 4).map((v) => (
@@ -116,13 +115,13 @@ export function MessageTemplates({ initialShippingTemplate, initialDeliveredTemp
                     <Label htmlFor="deliveredTemplate" className="text-base font-medium">
                         ✅ Tin nhắn khi GIAO THÀNH CÔNG
                     </Label>
-                    <Textarea
+                    <textarea
                         id="deliveredTemplate"
                         value={deliveredTemplate}
                         onChange={(e) => setDeliveredTemplate(e.target.value)}
                         placeholder="Nhập mẫu tin nhắn..."
                         rows={3}
-                        className="font-mono text-sm"
+                        className="w-full font-mono text-sm p-2 border rounded-md"
                     />
                     <div className="flex gap-1 flex-wrap">
                         {TEMPLATE_VARIABLES.filter((v) => ["{{orderCode}}", "{{shopName}}", "{{customerName}}"].includes(v.key)).map((v) => (
