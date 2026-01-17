@@ -72,11 +72,14 @@ export function ProductSelection({
         }
     }, [customerType, customer]);
 
-    // Filter products
-    const filteredProducts = products.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter products: only show products with stock > 0
+    const filteredProducts = products
+        .filter((p) => p.stock > 0) // Only show products with positive stock
+        .filter((p) =>
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => a.stock - b.stock); // Sort by stock ascending
 
     // Separate products: in cart first, then others
     const productsInCart = filteredProducts.filter((p) =>
