@@ -83,7 +83,7 @@ export async function createPurchaseOrder(data: {
                 data: {
                     code: poCode,
                     type: "PURCHASE",
-                    status: "COMPLETED",
+                    status: "PENDING",
                     total: total,
                     paid: paid,
                     supplierId: supplierId,

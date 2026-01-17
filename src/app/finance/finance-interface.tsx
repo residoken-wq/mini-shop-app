@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Wallet, ArrowUpRight, ArrowDownLeft, Users, Truck, PlusCircle, History } from "lucide-react";
+import { Wallet, ArrowUpRight, ArrowDownLeft, Users, Truck, PlusCircle, History, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getTransactions, confirmTransactionPayment, settleDebt, createManualTransaction } from "./actions";
+import { getTransactions, confirmTransactionPayment, settleDebt, createManualTransaction, deleteTransaction } from "./actions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "lucide-react";
 
@@ -35,6 +35,7 @@ export function FinanceInterface({ stats, debtors, initialTransactions, supplier
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [confirmTarget, setConfirmTarget] = useState<Transaction | null>(null);
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [paymentMethod, setPaymentMethod] = useState("CASH");
 
     // State for Manual Transaction
     const [manualOpen, setManualOpen] = useState(false);
@@ -52,10 +53,11 @@ export function FinanceInterface({ stats, debtors, initialTransactions, supplier
 
     const handleConfirmPayment = async () => {
         if (!confirmTarget) return;
-        const res = await confirmTransactionPayment(confirmTarget.id, new Date(paymentDate));
+        const res = await confirmTransactionPayment(confirmTarget.id, new Date(paymentDate), paymentMethod === "CASH" ? "Tiền mặt" : "Chuyển khoản");
         if (res.success) {
             setConfirmOpen(false);
             setConfirmTarget(null);
+            setPaymentMethod("CASH");
             // Refresh transactions
             const newTransactions = await getTransactions(supplierFilter);
             setTransactions(newTransactions);
@@ -207,18 +209,29 @@ export function FinanceInterface({ stats, debtors, initialTransactions, supplier
                                             </p>
                                         )}
                                         {t.type === "EXPENSE" && (
-                                            <div className="mt-1">
+                                            <div className="mt-1 flex gap-2">
                                                 {(t as any).isPaid ? (
                                                     <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px]">
                                                         Đã TT: {new Date((t as any).paidAt).toLocaleDateString('vi-VN')}
                                                     </Badge>
                                                 ) : (
-                                                    <Button variant="ghost" size="sm" className="h-6 text-[10px] text-orange-600 bg-orange-50 hover:bg-orange-100" onClick={() => {
-                                                        setConfirmTarget(t);
-                                                        setConfirmOpen(true);
-                                                    }}>
-                                                        Chưa TT - Xác nhận ngay
-                                                    </Button>
+                                                    <>
+                                                        <Button variant="ghost" size="sm" className="h-6 text-[10px] text-orange-600 bg-orange-50 hover:bg-orange-100" onClick={() => {
+                                                            setConfirmTarget(t);
+                                                            setConfirmOpen(true);
+                                                        }}>
+                                                            Chưa TT - Xác nhận ngay
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={async () => {
+                                                            if (confirm("Bạn có chắc muốn xóa phiếu chi này?")) {
+                                                                await deleteTransaction(t.id);
+                                                                const newTransactions = await getTransactions(supplierFilter);
+                                                                setTransactions(newTransactions);
+                                                            }
+                                                        }}>
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    </>
                                                 )}
                                             </div>
                                         )}
@@ -247,6 +260,18 @@ export function FinanceInterface({ stats, debtors, initialTransactions, supplier
                                 value={paymentDate}
                                 onChange={(e) => setPaymentDate(e.target.value)}
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Hình thức thanh toán</Label>
+                            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="CASH">Tiền mặt</SelectItem>
+                                    <SelectItem value="TRANSFER">Chuyển khoản</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>

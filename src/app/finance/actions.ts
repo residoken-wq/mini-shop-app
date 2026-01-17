@@ -117,18 +117,33 @@ export async function getTransactions(supplierId?: string | "ALL") {
     });
 }
 
-export async function confirmTransactionPayment(transactionId: string, paidDate: Date) {
+export async function confirmTransactionPayment(transactionId: string, paidDate: Date, paymentMethod: string) {
     try {
+        // Get current description
+        const transaction = await db.transaction.findUnique({ where: { id: transactionId } });
+        const newDescription = transaction?.description ? `${transaction.description} - ${paymentMethod}` : `Chi phí - ${paymentMethod}`;
+
         await db.transaction.update({
             where: { id: transactionId },
             data: {
                 isPaid: true,
-                paidAt: paidDate
+                paidAt: paidDate,
+                description: newDescription
             }
         });
         revalidatePath("/finance");
         return { success: true };
     } catch (e) {
         return { success: false, error: "Failed to confirm payment" };
+    }
+}
+
+export async function deleteTransaction(id: string) {
+    try {
+        await db.transaction.delete({ where: { id } });
+        revalidatePath("/finance");
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Failed to delete transaction" };
     }
 }
