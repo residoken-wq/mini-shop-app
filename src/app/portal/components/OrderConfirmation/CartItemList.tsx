@@ -71,9 +71,27 @@ export function CartItemList({
                                         {item.product.name}
                                     </h4>
                                     <p className="text-xs text-gray-500">{item.product.sku}</p>
-                                    <p className="text-sm text-purple-600 font-medium mt-1">
-                                        {formatCurrency(effectivePrice)}đ/{item.product.unit}
-                                    </p>
+                                    {/* Price Display Logic */}
+                                    {item.product.saleUnit && item.product.saleRatio && item.product.saleRatio > 1 ? (
+                                        <div className="mt-1 space-y-0.5">
+                                            {/* Price per Sale Unit */}
+                                            <p className="text-sm text-purple-600 font-medium">
+                                                {formatCurrency(effectivePrice)}đ/{item.product.saleUnit}
+                                            </p>
+                                            {/* Converted to Base Unit */}
+                                            <p className="text-xs text-muted-foreground">
+                                                ≈ {formatCurrency(effectivePrice / item.product.saleRatio)}đ/{item.product.unit}
+                                                {' • '}
+                                                <span className="font-medium text-gray-700">
+                                                    {(item.quantity * item.product.saleRatio).toLocaleString('vi-VN')} {item.product.unit}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-purple-600 font-medium mt-1">
+                                            {formatCurrency(effectivePrice)}đ/{item.product.unit}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Delete button */}

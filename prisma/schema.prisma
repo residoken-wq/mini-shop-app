@@ -167,6 +167,7 @@ model OrderItem {
   product   Product  @relation(fields: [productId], references: [id])
   quantity  Float    // Changed to Float for decimal quantities (e.g., 0.5kg)
   price     Float
+  unit      String   @default("kg") // Unit at the time of order (e.g. "kg", "trái")
 }
 
 model Transaction {

@@ -191,7 +191,7 @@ export async function submitPortalOrder(data: {
     note?: string;
     // Payment method: "QR", "COD", "CREDIT"
     paymentMethod?: string;
-    items: { productId: string; quantity: number; price: number }[];
+    items: { productId: string; quantity: number; price: number; unit?: string }[];
     shippingFee?: number;
 }) {
     try {
@@ -259,7 +259,8 @@ export async function submitPortalOrder(data: {
                     create: data.items.map(item => ({
                         productId: item.productId,
                         quantity: item.quantity,
-                        price: item.price
+                        price: item.price,
+                        unit: item.unit || "kg"
                     }))
                 }
             },

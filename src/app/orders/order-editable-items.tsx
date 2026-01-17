@@ -22,7 +22,7 @@ interface OrderEditableItemsProps {
 const NON_EDITABLE_STATUSES = ["SHIPPING", "COMPLETED"];
 
 export function OrderEditableItems({ orderId, items, discount, status, onUpdate }: OrderEditableItemsProps) {
-    const [editingItems, setEditingItems] = useState<Record<string, { quantity: number; price: number }>>({});
+    const [editingItems, setEditingItems] = useState<Record<string, { quantity: number; price: number; unit?: string }>>({});
     const [currentDiscount, setCurrentDiscount] = useState(discount);
     const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
     const [discountPercent, setDiscountPercent] = useState(0);
@@ -50,11 +50,24 @@ export function OrderEditableItems({ orderId, items, discount, status, onUpdate 
         return subtotal - currentDiscount;
     };
 
-    const handleEditItem = (itemId: string, quantity: number, price: number) => {
+    const handleEditItem = (itemId: string, quantity: number, price: number, unit?: string) => {
         setEditingItems(prev => ({
             ...prev,
-            [itemId]: { quantity, price }
+            [itemId]: { quantity, price, unit }
         }));
+    };
+
+    // "Weigh" feature: Convert Sale Unit to Base Unit
+    const handleWeighItem = (item: OrderItemWithProduct) => {
+        const saleRatio = item.product.saleRatio || 1;
+        // Estimate weight = current quantity * ratio
+        const estimatedWeight = item.quantity * saleRatio;
+        // Use Base Price
+        const basePrice = item.product.price;
+        // Use Base Unit
+        const baseUnit = item.product.unit;
+
+        handleEditItem(item.id, estimatedWeight, basePrice, baseUnit);
     };
 
     const handleSaveItem = async (itemId: string) => {
@@ -123,16 +136,38 @@ export function OrderEditableItems({ orderId, items, discount, status, onUpdate 
                         const isEditing = !!edited;
                         const displayQty = isEditing ? edited.quantity : item.quantity;
                         const displayPrice = isEditing ? edited.price : item.price;
+                        // Cast item to any to access unit if not generated yet.
+                        // Ideally we extend the type, but for now:
+                        const itemUnit = isEditing ? (edited.unit || (item as any).unit || "kg") : ((item as any).unit || "kg");
+
+                        const isSaleUnit = !isEditing && itemUnit !== item.product.unit && item.product.saleUnit;
 
                         return (
                             <div key={item.id} className="p-3 space-y-2">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <p className="font-medium text-sm">{item.product.name}</p>
-                                        <p className="text-xs text-gray-500">SKU: {item.product.sku}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs text-gray-500">SKU: {item.product.sku}</p>
+                                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-5">
+                                                {itemUnit}
+                                            </Badge>
+                                        </div>
                                     </div>
                                     {isEditable && (
                                         <div className="flex gap-1">
+                                            {/* Weigh Button for Sale Unit items */}
+                                            {isSaleUnit && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={() => handleWeighItem(item)}
+                                                    className="h-7 px-2 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                >
+                                                    ⚖️ Cân
+                                                </Button>
+                                            )}
+
                                             {isEditing ? (
                                                 <>
                                                     <Button
@@ -170,13 +205,13 @@ export function OrderEditableItems({ orderId, items, discount, status, onUpdate 
                                 <div className="grid grid-cols-3 gap-2 text-sm">
                                     {/* Quantity */}
                                     <div>
-                                        <label className="text-xs text-gray-500">SL</label>
+                                        <label className="text-xs text-gray-500">SL ({itemUnit})</label>
                                         {isEditable ? (
                                             <Input
                                                 type="number"
-                                                step="0.1"
+                                                step="0.01"
                                                 value={displayQty}
-                                                onChange={(e) => handleEditItem(item.id, parseFloat(e.target.value) || 0, displayPrice)}
+                                                onChange={(e) => handleEditItem(item.id, parseFloat(e.target.value) || 0, displayPrice, itemUnit)}
                                                 className="h-8 text-sm"
                                             />
                                         ) : (
@@ -198,11 +233,11 @@ export function OrderEditableItems({ orderId, items, discount, status, onUpdate 
                                             <Input
                                                 type="number"
                                                 value={displayPrice}
-                                                onChange={(e) => handleEditItem(item.id, displayQty, parseFloat(e.target.value) || 0)}
+                                                onChange={(e) => handleEditItem(item.id, displayQty, parseFloat(e.target.value) || 0, itemUnit)}
                                                 className="h-8 text-sm"
                                             />
                                         ) : (
-                                            <p className="font-medium">{formatCurrency(displayPrice)}đ</p>
+                                            <p className="font-medium">{formatCurrency(displayPrice)}đ/{itemUnit}</p>
                                         )}
                                     </div>
 

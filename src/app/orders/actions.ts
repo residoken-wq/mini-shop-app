@@ -151,13 +151,14 @@ export async function trackOrdersByPhone(phone: string) {
 }
 
 // Update order item quantity and price
-export async function updateOrderItem(itemId: string, data: { quantity?: number; price?: number }) {
+export async function updateOrderItem(itemId: string, data: { quantity?: number; price?: number; unit?: string }) {
     try {
         const item = await db.orderItem.update({
             where: { id: itemId },
             data: {
                 quantity: data.quantity,
-                price: data.price
+                price: data.price,
+                unit: data.unit
             }
         });
 
@@ -283,16 +284,22 @@ export async function getPendingOrdersSummary() {
 
         for (const order of pendingOrders) {
             for (const item of order.items) {
+                // Calculate required quantity in BASE UNIT
+                // If item.unit is Sale Unit, convert to Base Unit using ratio
+                const isSaleUnit = item.unit && item.product.saleUnit && item.unit === item.product.saleUnit;
+                const ratio = isSaleUnit ? (item.product.saleRatio || 1) : 1;
+                const quantityInBase = item.quantity * ratio;
+
                 const existing = productMap.get(item.productId);
                 if (existing) {
-                    existing.totalRequired += item.quantity;
+                    existing.totalRequired += quantityInBase;
                 } else {
                     productMap.set(item.productId, {
                         productId: item.productId,
                         name: item.product.name,
                         sku: item.product.sku,
-                        unit: item.product.unit,
-                        totalRequired: item.quantity,
+                        unit: item.product.unit, // Always use Base Unit for aggregation
+                        totalRequired: quantityInBase,
                         currentStock: item.product.stock
                     });
                 }
@@ -322,7 +329,15 @@ export async function getPendingOrdersSummary() {
         const ordersWithStatus = pendingOrders.map(order => {
             const allItemsAvailable = order.items.every(item => {
                 const productInfo = productMap.get(item.productId);
-                return productInfo && productInfo.currentStock >= item.quantity;
+                const isSaleUnit = item.unit && item.product.saleUnit && item.unit === item.product.saleUnit;
+                const ratio = isSaleUnit ? (item.product.saleRatio || 1) : 1;
+                const quantityInBase = item.quantity * ratio;
+
+                // Check against real-time stock, accounting for other orders? 
+                // Currently simplified: checks if TOTAL stock covers this item's specific need
+                // Ideally should decrement available stock as we iterate orders, but simple check against total required vs total stock is aggregated above.
+                // For individual order "readiness", we usually check if (Stock >= Qty).
+                return productInfo && productInfo.currentStock >= quantityInBase;
             });
 
             return {
@@ -339,7 +354,7 @@ export async function getPendingOrdersSummary() {
                     productName: item.product.name,
                     sku: item.product.sku,
                     quantity: item.quantity,
-                    unit: item.product.unit,
+                    unit: item.unit || item.product.unit, // Show Ordered Unit
                     currentStock: productMap.get(item.productId)?.currentStock || 0
                 }))
             };
