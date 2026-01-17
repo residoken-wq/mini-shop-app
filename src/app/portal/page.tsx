@@ -232,8 +232,12 @@ export default function PortalPage() {
         setCart(cart.filter(item => item.product.id !== productId));
     };
 
-    const getCartTotal = () => {
+    const getProductTotal = () => {
         return cart.reduce((sum, item) => sum + (item.product.displayPrice * item.quantity), 0);
+    };
+
+    const getFinalTotal = () => {
+        return getProductTotal() + shippingFee;
     };
 
     const hasExpiredItems = cart.some(item => item.product.isExpired);
@@ -259,6 +263,7 @@ export default function PortalPage() {
                 deliveryMethod,
                 note: orderNote,
                 paymentMethod,
+                shippingFee,
                 items: cart.map(item => ({
                     productId: item.product.id,
                     quantity: item.quantity,
@@ -740,7 +745,7 @@ export default function PortalPage() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">{cart.length} sản phẩm</p>
-                                        <p className="font-bold text-lg">{formatCurrency(getCartTotal())}đ</p>
+                                        <p className="font-bold text-lg">{formatCurrency(getProductTotal())}đ</p>
                                     </div>
                                 </div>
                                 <Button
@@ -1062,11 +1067,20 @@ export default function PortalPage() {
                             <span className="text-gray-600">Tổng số lượng</span>
                             <span className="font-medium">{cart.reduce((sum, item) => sum + item.quantity, 0)} đơn vị</span>
                         </div>
-                        <div className="flex justify-between items-center pt-2">
-                            <span className="text-lg font-semibold">Tổng cộng</span>
-                            <span className="text-2xl font-bold text-purple-600">
-                                {formatCurrency(getCartTotal())}đ
-                            </span>
+                        {/* Bill Details */}
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                            <div className="flex justify-between text-gray-600">
+                                <span>Tạm tính</span>
+                                <span>{formatCurrency(getProductTotal())}đ</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                                <span>Phí vận chuyển</span>
+                                <span>{formatCurrency(shippingFee)}đ</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-lg pt-2 border-t text-purple-600">
+                                <span>Tổng cộng</span>
+                                <span>{formatCurrency(getFinalTotal())}đ</span>
+                            </div>
                         </div>
                     </div>
 

@@ -142,6 +142,7 @@ export async function submitPortalOrder(data: {
     // Payment method: "QR", "COD", "CREDIT"
     paymentMethod?: string;
     items: { productId: string; quantity: number; price: number }[];
+    shippingFee?: number;
 }) {
     try {
         // Validate
@@ -179,7 +180,11 @@ export async function submitPortalOrder(data: {
         }
 
         // Calculate total
-        const total = data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        let total = data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        // Add shipping fee if applicable
+        const shippingFee = (deliveryMethod === "DELIVERY" && data.shippingFee) ? data.shippingFee : 0;
+        total += shippingFee;
 
         // Generate order code
         const orderCode = await generateCode("SO");
@@ -198,6 +203,8 @@ export async function submitPortalOrder(data: {
                 deliveryMethod: deliveryMethod,
                 note: data.note || null,
                 paymentMethod: paymentMethod,
+                shippingFee: shippingFee,
+                shippingPaidBy: "CUSTOMER",
                 items: {
                     create: data.items.map(item => ({
                         productId: item.productId,

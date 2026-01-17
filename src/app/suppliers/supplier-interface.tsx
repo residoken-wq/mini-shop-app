@@ -87,6 +87,18 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
         }));
     };
 
+    const setQuantity = (productId: string, quantity: number) => {
+        setCart(prev => prev.map(item => {
+            if (item.product.id === productId) {
+                // Allow 0 or empty during typing, but validation might be needed later.
+                // For now, let's keep it simple. If 0, it might mean delete, but let's just stick to quantity update.
+                const newQty = Math.max(0, quantity);
+                return { ...item, quantity: newQty };
+            }
+            return item;
+        }));
+    };
+
     const updateCost = (productId: string, newCost: number) => {
         setCart(prev => prev.map(item => {
             if (item.product.id === productId) {
@@ -278,7 +290,12 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, -1)}>-</Button>
-                                    <span className="w-6 text-center text-sm">{item.quantity}</span>
+                                    <Input
+                                        type="number"
+                                        className="h-8 w-14 text-center px-1"
+                                        value={item.quantity}
+                                        onChange={(e) => setQuantity(item.product.id, parseFloat(e.target.value) || 0)}
+                                    />
                                     <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.product.id, 1)}>+</Button>
                                 </div>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.product.id)}>
