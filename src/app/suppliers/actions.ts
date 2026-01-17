@@ -85,6 +85,7 @@ export async function createPurchaseOrder(data: {
                     type: "PURCHASE",
                     status: "COMPLETED",
                     total: total,
+                    paid: paid,
                     supplierId: supplierId,
                     items: {
                         create: items.map((item) => ({

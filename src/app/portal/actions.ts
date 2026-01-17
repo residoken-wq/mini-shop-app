@@ -282,6 +282,25 @@ export async function getShopBankInfo() {
     }
 }
 
+// Get active districts for portal delivery
+export async function getActiveDistrictsForPortal() {
+    try {
+        const districts = await db.district.findMany({
+            where: { isActive: true },
+            orderBy: { name: "asc" },
+            select: {
+                id: true,
+                name: true,
+                shippingFee: true
+            }
+        });
+        return { success: true, districts };
+    } catch (error) {
+        console.error("Get districts error:", error);
+        return { success: false, error: "Lỗi lấy danh sách quận/huyện" };
+    }
+}
+
 import { ORDER_STATUSES, OrderStatus } from "@/app/orders/order-constants";
 
 // Track orders by phone number (for customer)
@@ -319,14 +338,26 @@ export async function trackOrdersByPhone(phone: string) {
         orderBy: { createdAt: "desc" }
     });
 
+    // Get bank info for QR payment
+    const settings = await db.shopSettings.findUnique({
+        where: { id: "shop" }
+    });
+
     return {
         success: true,
+        bankInfo: settings ? {
+            bankName: settings.bankName,
+            bankAccount: settings.bankAccount,
+            bankOwner: settings.bankOwner
+        } : null,
         orders: orders.map(order => ({
             id: order.id,
             code: order.code,
             status: order.status,
             statusInfo: ORDER_STATUSES[order.status as OrderStatus] || ORDER_STATUSES.PENDING,
             total: order.total,
+            paid: order.paid || 0,
+            discount: order.discount || 0,
             paymentMethod: order.paymentMethod,
             recipientName: order.recipientName,
             recipientPhone: order.recipientPhone,

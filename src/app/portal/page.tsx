@@ -24,9 +24,15 @@ import {
     QrCode,
     PackageSearch
 } from "lucide-react";
-import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders, getShopBankInfo } from "./actions";
+import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders, getShopBankInfo, getActiveDistrictsForPortal } from "./actions";
 import OrderTracking from "./order-tracking";
 import { getImageUrl } from "@/lib/image-utils";
+
+interface District {
+    id: string;
+    name: string;
+    shippingFee: number;
+}
 
 interface Product {
     id: string;
@@ -69,6 +75,12 @@ export default function PortalPage() {
     const [deliveryAddress, setDeliveryAddress] = useState("");
     const [deliveryMethod, setDeliveryMethod] = useState<"PICKUP" | "DELIVERY">("DELIVERY");
     const [orderNote, setOrderNote] = useState("");
+
+    // District and shipping fee
+    const [districts, setDistricts] = useState<District[]>([]);
+    const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+    const [isOutsideHCMC, setIsOutsideHCMC] = useState(false);
+    const [shippingFee, setShippingFee] = useState(0);
 
     const [orderResult, setOrderResult] = useState<{
         success: boolean;
@@ -113,7 +125,7 @@ export default function PortalPage() {
         }
     }, [step, loadProducts]);
 
-    // Load bank info when step 3 is reached
+    // Load bank info and districts when step 3 is reached
     useEffect(() => {
         if (step === 3) {
             getShopBankInfo().then(res => {
@@ -121,8 +133,26 @@ export default function PortalPage() {
                     setBankInfo(res.bankInfo);
                 }
             });
+            // Load districts for HCMC
+            getActiveDistrictsForPortal().then(res => {
+                if (res.success && res.districts) {
+                    setDistricts(res.districts);
+                }
+            });
         }
     }, [step]);
+
+    // Update shipping fee when district changes
+    useEffect(() => {
+        if (isOutsideHCMC) {
+            setShippingFee(0); // Will be determined later
+        } else if (selectedDistrict) {
+            const district = districts.find(d => d.id === selectedDistrict);
+            setShippingFee(district?.shippingFee || 0);
+        } else {
+            setShippingFee(0);
+        }
+    }, [selectedDistrict, isOutsideHCMC, districts]);
 
     const handleSelectRetail = () => {
         setCustomerType("retail");
@@ -347,14 +377,14 @@ export default function PortalPage() {
                         </div>
                     </div>
 
-                    {/* Order Tracking Link */}
+                    {/* Order Tracking Link - Prominent Button */}
                     <div className="border-t pt-4">
                         <button
                             onClick={() => setMode("track")}
-                            className="w-full p-4 border-2 border-dashed rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all flex items-center justify-center gap-3"
+                            className="w-full p-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl hover:from-amber-500 hover:to-orange-600 transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                         >
-                            <PackageSearch className="w-6 h-6 text-purple-600" />
-                            <span className="font-medium text-gray-700">Tra cứu đơn hàng đã đặt</span>
+                            <PackageSearch className="w-6 h-6" />
+                            <span className="font-bold text-lg">Tra cứu đơn hàng đã đặt</span>
                         </button>
                     </div>
                 </div>
@@ -849,19 +879,68 @@ export default function PortalPage() {
                             </div>
                         </div>
 
-                        {/* Address - Only show for DELIVERY */}
+                        {/* District Selection - Only show for DELIVERY */}
                         {deliveryMethod === "DELIVERY" && (
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                                    📍 Địa chỉ giao hàng *
-                                </label>
-                                <Input
-                                    value={deliveryAddress}
-                                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                                    placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-                                    className="h-11 border-gray-200"
-                                />
-                            </div>
+                            <>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                                        🏙️ Khu vực giao hàng *
+                                    </label>
+                                    <select
+                                        value={isOutsideHCMC ? "outside" : selectedDistrict}
+                                        onChange={(e) => {
+                                            if (e.target.value === "outside") {
+                                                setIsOutsideHCMC(true);
+                                                setSelectedDistrict("");
+                                            } else {
+                                                setIsOutsideHCMC(false);
+                                                setSelectedDistrict(e.target.value);
+                                            }
+                                        }}
+                                        className="w-full h-11 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    >
+                                        <option value="">-- Chọn quận/huyện --</option>
+                                        <optgroup label="TP. Hồ Chí Minh">
+                                            {districts.map(d => (
+                                                <option key={d.id} value={d.id}>
+                                                    {d.name} - Phí VC: {formatCurrency(d.shippingFee)}đ
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                        <option value="outside">🚀 Ngoài TP.HCM</option>
+                                    </select>
+                                </div>
+
+                                {/* Outside HCMC Notice */}
+                                {isOutsideHCMC && (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <p className="text-sm text-amber-800 flex items-center gap-2">
+                                            <AlertCircle className="w-4 h-4" />
+                                            Shop sẽ liên hệ thông báo phí vận chuyển sau khi xác nhận đơn hàng
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Shipping Fee Display for HCMC */}
+                                {!isOutsideHCMC && selectedDistrict && shippingFee > 0 && (
+                                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                                        <span className="text-sm text-blue-800">🚚 Phí vận chuyển:</span>
+                                        <span className="font-bold text-blue-600">{formatCurrency(shippingFee)}đ</span>
+                                    </div>
+                                )}
+
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                                        📍 Địa chỉ chi tiết *
+                                    </label>
+                                    <Input
+                                        value={deliveryAddress}
+                                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                                        placeholder="Số nhà, đường, phường/xã..."
+                                        className="h-11 border-gray-200"
+                                    />
+                                </div>
+                            </>
                         )}
 
                         {/* Note */}

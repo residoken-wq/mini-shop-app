@@ -163,4 +163,80 @@ export async function deleteCarrier(id: string) {
     }
 }
 
+// ============ DISTRICT MANAGEMENT ============
 
+export async function getDistricts() {
+    try {
+        const districts = await db.district.findMany({
+            orderBy: { name: "asc" }
+        });
+        return { success: true, districts };
+    } catch (error) {
+        console.error("Get districts error:", error);
+        return { success: false, error: "Lỗi lấy danh sách quận/huyện" };
+    }
+}
+
+export async function getActiveDistricts() {
+    try {
+        const districts = await db.district.findMany({
+            where: { isActive: true },
+            orderBy: { name: "asc" }
+        });
+        return { success: true, districts };
+    } catch (error) {
+        console.error("Get active districts error:", error);
+        return { success: false, error: "Lỗi lấy danh sách quận/huyện" };
+    }
+}
+
+export async function createDistrict(data: { name: string; shippingFee: number }) {
+    try {
+        const district = await db.district.create({
+            data: {
+                name: data.name,
+                shippingFee: data.shippingFee || 0
+            }
+        });
+        revalidatePath("/settings");
+        revalidatePath("/portal");
+        return { success: true, district };
+    } catch (error: any) {
+        console.error("Create district error:", error);
+        if (error.code === "P2002") {
+            return { success: false, error: "Quận/huyện này đã tồn tại" };
+        }
+        return { success: false, error: "Lỗi tạo quận/huyện" };
+    }
+}
+
+export async function updateDistrict(id: string, data: { name?: string; shippingFee?: number; isActive?: boolean }) {
+    try {
+        const district = await db.district.update({
+            where: { id },
+            data: {
+                ...(data.name !== undefined && { name: data.name }),
+                ...(data.shippingFee !== undefined && { shippingFee: data.shippingFee }),
+                ...(data.isActive !== undefined && { isActive: data.isActive })
+            }
+        });
+        revalidatePath("/settings");
+        revalidatePath("/portal");
+        return { success: true, district };
+    } catch (error) {
+        console.error("Update district error:", error);
+        return { success: false, error: "Lỗi cập nhật quận/huyện" };
+    }
+}
+
+export async function deleteDistrict(id: string) {
+    try {
+        await db.district.delete({ where: { id } });
+        revalidatePath("/settings");
+        revalidatePath("/portal");
+        return { success: true };
+    } catch (error) {
+        console.error("Delete district error:", error);
+        return { success: false, error: "Lỗi xóa quận/huyện" };
+    }
+}

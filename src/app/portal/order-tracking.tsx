@@ -15,7 +15,9 @@ import {
     Loader2,
     ChevronDown,
     ChevronUp,
-    MapPin
+    MapPin,
+    CreditCard,
+    QrCode
 } from "lucide-react";
 import { trackOrdersByPhone } from "./actions";
 import { ORDER_STATUSES, OrderStatus } from "@/app/orders/order-constants";
@@ -27,6 +29,7 @@ interface TrackedOrder {
     status: string;
     statusInfo: { label: string; color: string; step: number };
     total: number;
+    paid: number;
     discount: number;
     paymentMethod: string;
     recipientName: string | null;
@@ -36,13 +39,21 @@ interface TrackedOrder {
     items: { name: string; quantity: number; price: number }[];
 }
 
+interface BankInfo {
+    bankName: string;
+    bankAccount: string;
+    bankOwner: string;
+}
+
 export default function OrderTracking() {
     const [phone, setPhone] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [orders, setOrders] = useState<TrackedOrder[]>([]);
+    const [bankInfo, setBankInfo] = useState<BankInfo | null>(null);
     const [error, setError] = useState("");
     const [hasSearched, setHasSearched] = useState(false);
     const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+    const [showQR, setShowQR] = useState<string | null>(null);
 
     const handleSearch = async () => {
         if (!phone.trim()) {
@@ -58,6 +69,9 @@ export default function OrderTracking() {
             const result = await trackOrdersByPhone(phone);
             if (result.success && result.orders) {
                 setOrders(result.orders as TrackedOrder[]);
+                if (result.bankInfo) {
+                    setBankInfo(result.bankInfo as BankInfo);
+                }
             } else {
                 setError(result.error || "Không tìm thấy đơn hàng");
                 setOrders([]);
@@ -68,6 +82,25 @@ export default function OrderTracking() {
         } finally {
             setIsSearching(false);
         }
+    };
+
+    // Generate VietQR URL
+    const getVietQRUrl = (order: TrackedOrder) => {
+        if (!bankInfo?.bankAccount || !bankInfo?.bankName) return null;
+        const bankCodes: Record<string, string> = {
+            'Vietcombank': 'VCB', 'VCB': 'VCB',
+            'Techcombank': 'TCB', 'TCB': 'TCB',
+            'MB Bank': 'MB', 'MB': 'MB', 'BIDV': 'BIDV',
+            'Agribank': 'VBA', 'VBA': 'VBA', 'ACB': 'ACB',
+            'VPBank': 'VPB', 'VPB': 'VPB',
+            'Sacombank': 'STB', 'STB': 'STB',
+            'TPBank': 'TPB', 'TPB': 'TPB',
+            'Vietinbank': 'CTG', 'CTG': 'CTG',
+        };
+        const bankCode = bankCodes[bankInfo.bankName] || bankInfo.bankName.toUpperCase();
+        const amount = order.total - order.paid;
+        const info = encodeURIComponent(`${order.code}`);
+        return `https://img.vietqr.io/image/${bankCode}-${bankInfo.bankAccount}-compact2.png?amount=${amount}&addInfo=${info}&accountName=${encodeURIComponent(bankInfo.bankOwner)}`;
     };
 
     const formatCurrency = (value: number) => {
@@ -281,12 +314,19 @@ export default function OrderTracking() {
                                                         order.paymentMethod === "QR" ? "📱 Chuyển khoản" : "📋 Công nợ"}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between">
+
+                                            {/* Payment Status */}
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-gray-500">Trạng thái:</span>
-                                                {order.status === "COMPLETED" ? (
+                                                {order.paid >= order.total || order.status === "COMPLETED" ? (
                                                     <Badge className="bg-green-100 text-green-700 text-xs">
                                                         <CheckCircle className="w-3 h-3 mr-1" />
                                                         Đã thanh toán
+                                                    </Badge>
+                                                ) : order.paid > 0 ? (
+                                                    <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                                        <CreditCard className="w-3 h-3 mr-1" />
+                                                        Đã thanh toán một phần
                                                     </Badge>
                                                 ) : (
                                                     <Badge className="bg-yellow-100 text-yellow-700 text-xs">
@@ -295,6 +335,20 @@ export default function OrderTracking() {
                                                     </Badge>
                                                 )}
                                             </div>
+
+                                            {/* Show paid amount if partially paid */}
+                                            {order.paid > 0 && order.paid < order.total && (
+                                                <>
+                                                    <div className="flex justify-between text-green-600">
+                                                        <span>✓ Đã thanh toán:</span>
+                                                        <span className="font-medium">{formatCurrency(order.paid)}đ</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-orange-600">
+                                                        <span>⏳ Còn lại:</span>
+                                                        <span className="font-bold">{formatCurrency(order.total - order.paid)}đ</span>
+                                                    </div>
+                                                </>
+                                            )}
 
                                             {/* Show discount when READY or later and discount > 0 */}
                                             {order.discount > 0 && ["READY", "SHIPPING", "COMPLETED"].includes(order.status) && (
@@ -314,6 +368,40 @@ export default function OrderTracking() {
                                                 <span className="font-medium">Thành tiền:</span>
                                                 <span className="font-bold text-purple-600">{formatCurrency(order.total)}đ</span>
                                             </div>
+
+                                            {/* QR Payment Button - only show if not fully paid and payment method is QR */}
+                                            {order.paid < order.total && order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
+                                                <div className="pt-3 border-t mt-3">
+                                                    <Button
+                                                        onClick={() => setShowQR(showQR === order.id ? null : order.id)}
+                                                        variant="outline"
+                                                        className="w-full bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-purple-100"
+                                                    >
+                                                        <QrCode className="w-4 h-4 mr-2" />
+                                                        {showQR === order.id ? "Ẩn mã QR" : "Thanh toán qua QR"}
+                                                    </Button>
+
+                                                    {showQR === order.id && bankInfo && (
+                                                        <div className="mt-3 p-3 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg text-center space-y-2">
+                                                            <p className="text-xs text-gray-600">Quét mã để thanh toán</p>
+                                                            {getVietQRUrl(order) && (
+                                                                <img
+                                                                    src={getVietQRUrl(order)!}
+                                                                    alt="QR Code"
+                                                                    className="mx-auto w-48 h-48 rounded-lg shadow-md"
+                                                                />
+                                                            )}
+                                                            <div className="text-xs text-gray-600 space-y-1">
+                                                                <p><span className="text-gray-500">Ngân hàng:</span> {bankInfo.bankName}</p>
+                                                                <p><span className="text-gray-500">STK:</span> <span className="font-mono font-bold">{bankInfo.bankAccount}</span></p>
+                                                                <p><span className="text-gray-500">Chủ TK:</span> {bankInfo.bankOwner}</p>
+                                                                <p><span className="text-gray-500">Số tiền:</span> <span className="font-bold text-purple-600">{formatCurrency(order.total - order.paid)}đ</span></p>
+                                                                <p><span className="text-gray-500">Nội dung:</span> <span className="font-mono">{order.code}</span></p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

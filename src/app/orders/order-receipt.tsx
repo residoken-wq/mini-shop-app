@@ -126,10 +126,62 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                         <span className="text-gray-600">Số lượng SP:</span>
                         <span className="font-medium">{order.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
                     </div>
+
+                    {/* Subtotal when has discount or shipping */}
+                    {((order.discount && order.discount > 0) || (order.shippingFee && order.shippingFee > 0 && order.shippingPaidBy === "CUSTOMER")) && (
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-gray-600">Tiền hàng:</span>
+                            <span className="font-medium">{formatPrice(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0))}đ</span>
+                        </div>
+                    )}
+
+                    {/* Discount */}
+                    {order.discount && order.discount > 0 && (
+                        <div className="flex justify-between items-center mb-1 text-orange-600">
+                            <span>🏷️ Giảm giá:</span>
+                            <span className="font-medium">-{formatPrice(order.discount)}đ</span>
+                        </div>
+                    )}
+
+                    {/* Shipping Info */}
+                    {order.shippingFee && order.shippingFee > 0 && (
+                        <>
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-gray-600">
+                                    🚚 Phí vận chuyển {order.carrierName ? `(${order.carrierName})` : ''}:
+                                </span>
+                                <span className="font-medium">
+                                    {order.shippingPaidBy === "SHOP" ? (
+                                        <span className="text-green-600">Shop trả</span>
+                                    ) : (
+                                        <span>{formatPrice(order.shippingFee)}đ</span>
+                                    )}
+                                </span>
+                            </div>
+                        </>
+                    )}
+
+                    {/* Grand Total */}
                     <div className="flex justify-between items-center text-lg font-bold text-gray-800 border-t border-gray-200 pt-2 mt-2">
                         <span>TỔNG CỘNG:</span>
-                        <span className="text-primary">{formatCurrency(order.total)}</span>
+                        <span className="text-primary">{formatCurrency(
+                            order.total + (order.shippingPaidBy === "CUSTOMER" && order.shippingFee ? order.shippingFee : 0)
+                        )}</span>
                     </div>
+
+                    {/* Paid amount if partially paid */}
+                    {order.paid && order.paid > 0 && order.paid < order.total && (
+                        <>
+                            <div className="flex justify-between items-center mt-1 text-green-600">
+                                <span>✓ Đã thanh toán:</span>
+                                <span className="font-medium">{formatPrice(order.paid)}đ</span>
+                            </div>
+                            <div className="flex justify-between items-center text-orange-600 font-bold">
+                                <span>⏳ Còn lại:</span>
+                                <span>{formatPrice(order.total + (order.shippingPaidBy === "CUSTOMER" && order.shippingFee ? order.shippingFee : 0) - order.paid)}đ</span>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Footer */}

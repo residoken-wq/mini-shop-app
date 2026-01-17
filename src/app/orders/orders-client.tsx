@@ -28,9 +28,10 @@ type OrderWithRelations = Order & {
 
 interface OrdersClientProps {
     initialOrders: OrderWithRelations[];
+    expensesTotal: number;
 }
 
-export function OrdersClient({ initialOrders }: OrdersClientProps) {
+export function OrdersClient({ initialOrders, expensesTotal }: OrdersClientProps) {
     const [orders, setOrders] = useState(initialOrders);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterType, setFilterType] = useState<"ALL" | "SALE" | "PURCHASE">("ALL");
@@ -135,6 +136,26 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
         );
     };
 
+    // Calculate profits
+    const completedSaleOrders = orders.filter(o => o.type === "SALE" && o.status === "COMPLETED");
+
+    // Revenue
+    const totalRevenue = completedSaleOrders.reduce((sum, o) => sum + o.total, 0);
+
+    // Order Profit = Revenue - COGS
+    const totalOrderProfit = completedSaleOrders.reduce((sum, o) => {
+        const cost = o.items.reduce((c, item) => c + (item.quantity * item.product.cost), 0);
+        return sum + (o.total - cost);
+    }, 0);
+
+    // Shop shipping fees (paid by shop)
+    const shopShippingFees = orders
+        .filter(o => o.type === "SALE" && o.status === "COMPLETED" && o.shippingPaidBy === "SHOP")
+        .reduce((sum, o) => sum + (o.shippingFee || 0), 0);
+
+    // Gross Profit = Order Profit - Expenses - Shop Shipping Fees
+    const grossProfit = totalOrderProfit - expensesTotal - shopShippingFees;
+
     return (
         <div className="space-y-4">
             {/* Search & Filter */}
@@ -190,40 +211,58 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
             )}
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Tổng đơn</CardTitle>
+                    <CardHeader className="pb-2 p-3">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">Tổng đơn</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold">{orders.length}</p>
+                    <CardContent className="p-3 pt-0">
+                        <p className="text-lg font-bold">{orders.length}</p>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Đơn bán</CardTitle>
+                    <CardHeader className="pb-2 p-3">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">Đơn bán</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-blue-600">{orders.filter(o => o.type === "SALE").length}</p>
+                    <CardContent className="p-3 pt-0">
+                        <p className="text-lg font-bold text-blue-600">{orders.filter(o => o.type === "SALE").length}</p>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Đơn mua</CardTitle>
+                    <CardHeader className="pb-2 p-3">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">Đơn mua</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-purple-600">{orders.filter(o => o.type === "PURCHASE").length}</p>
+                    <CardContent className="p-3 pt-0">
+                        <p className="text-lg font-bold text-purple-600">{orders.filter(o => o.type === "PURCHASE").length}</p>
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Tổng doanh thu</CardTitle>
+                    <CardHeader className="pb-2 p-3">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">Doanh thu</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-bold text-green-600">
-                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-                                orders.filter(o => o.type === "SALE" && o.status === "COMPLETED").reduce((sum, o) => sum + o.total, 0)
-                            )}
+                    <CardContent className="p-3 pt-0">
+                        <p className="text-lg font-bold text-green-600">
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalRevenue)}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2 p-3">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">LN Đơn hàng</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0">
+                        <p className="text-lg font-bold text-teal-600">
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalOrderProfit)}
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2 p-3">
+                        <CardTitle className="text-xs font-medium text-muted-foreground">LN Gộp</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0">
+                        <p className={cn("text-lg font-bold", grossProfit >= 0 ? "text-blue-600" : "text-red-600")}>
+                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(grossProfit)}
                         </p>
                     </CardContent>
                 </Card>
@@ -244,6 +283,9 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                                     <TableHead>Mã đơn</TableHead>
                                     <TableHead>Loại</TableHead>
                                     <TableHead>Khách/NCC</TableHead>
+                                    <TableHead className="text-right">Phí VC</TableHead>
+                                    <TableHead className="text-right">Thanh toán</TableHead>
+                                    <TableHead className="text-right">Lợi nhuận</TableHead>
                                     <TableHead className="text-right">Tổng tiền</TableHead>
                                     <TableHead>Trạng thái</TableHead>
                                     <TableHead>Ngày tạo</TableHead>
@@ -251,34 +293,68 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredOrders.map(order => (
-                                    <TableRow key={order.id}>
-                                        <TableCell className="font-medium">{order.code}</TableCell>
-                                        <TableCell>{getTypeBadge(order.type)}</TableCell>
-                                        <TableCell>
-                                            {order.type === "SALE"
-                                                ? (order.customer?.name || "Khách lẻ")
-                                                : (order.supplier?.name || "-")}
-                                        </TableCell>
-                                        <TableCell className="text-right font-bold">
-                                            {new Intl.NumberFormat('vi-VN').format(order.total)} đ
-                                        </TableCell>
-                                        <TableCell>{getStatusBadge(order.status)}</TableCell>
-                                        <TableCell className="text-muted-foreground text-sm">
-                                            {new Date(order.createdAt).toLocaleDateString('vi-VN')}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex gap-1">
-                                                <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(order.id)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {filteredOrders.map(order => {
+                                    const cost = order.items.reduce((sum, item) => sum + (item.quantity * item.product.cost), 0);
+                                    const shipCost = order.shippingPaidBy === "SHOP" ? (order.shippingFee || 0) : 0;
+                                    const profit = order.total - cost - shipCost;
+                                    const isPaid = (order as any).paid >= order.total;
+
+                                    return (
+                                        <TableRow key={order.id}>
+                                            <TableCell className="font-medium">{order.code}</TableCell>
+                                            <TableCell>{getTypeBadge(order.type)}</TableCell>
+                                            <TableCell>
+                                                {order.type === "SALE"
+                                                    ? (order.customer?.name || "Khách lẻ")
+                                                    : (order.supplier?.name || "-")}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {order.shippingFee > 0 ? (
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <span>{new Intl.NumberFormat('vi-VN').format(order.shippingFee)}</span>
+                                                        <span title={order.shippingPaidBy === "SHOP" ? "Shop trả" : "Khách trả"}>
+                                                            {order.shippingPaidBy === "SHOP" ? "🏪" : "👤"}
+                                                        </span>
+                                                    </div>
+                                                ) : "-"}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className={cn("font-bold", isPaid ? "text-green-600" : "text-orange-600")}>
+                                                        {new Intl.NumberFormat('vi-VN').format((order as any).paid || 0)}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        / {new Intl.NumberFormat('vi-VN').format(order.total)}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {order.type === "SALE" ? (
+                                                    <span className={cn("font-medium", profit >= 0 ? "text-green-600" : "text-red-600")}>
+                                                        {new Intl.NumberFormat('vi-VN').format(profit)}
+                                                    </span>
+                                                ) : "-"}
+                                            </TableCell>
+                                            <TableCell className="text-right font-bold">
+                                                {new Intl.NumberFormat('vi-VN').format(order.total)} đ
+                                            </TableCell>
+                                            <TableCell>{getStatusBadge(order.status)}</TableCell>
+                                            <TableCell className="text-muted-foreground text-sm">
+                                                {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-1">
+                                                    <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(order.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     )}

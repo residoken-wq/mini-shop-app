@@ -7,24 +7,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Wallet, ArrowUpRight, ArrowDownLeft, Users, Truck, PlusCircle, History } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { settleDebt, createManualTransaction } from "./actions";
+import { getTransactions, confirmTransactionPayment, settleDebt, createManualTransaction } from "./actions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "lucide-react";
 
 interface FinanceInterfaceProps {
     stats: { receivables: number; payables: number; cash: number };
     debtors: { customers: Customer[]; suppliers: Supplier[] };
     initialTransactions: (Transaction & { customer: { name: string } | null; supplier: { name: string } | null })[];
+    suppliers: Supplier[];
 }
 
-export function FinanceInterface({ stats, debtors, initialTransactions }: FinanceInterfaceProps) {
+export function FinanceInterface({ stats, debtors, initialTransactions, suppliers }: FinanceInterfaceProps) {
     const [transactions, setTransactions] = useState(initialTransactions);
+    const [supplierFilter, setSupplierFilter] = useState("ALL");
 
     // State for Settle Debt
     const [settleOpen, setSettleOpen] = useState(false);
     const [settleTarget, setSettleTarget] = useState<{ id: string; name: string; type: "CUSTOMER" | "SUPPLIER"; debt: number } | null>(null);
     const [settleAmount, setSettleAmount] = useState("");
+
+    // State for Payment Confirmation
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmTarget, setConfirmTarget] = useState<Transaction | null>(null);
+    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
     // State for Manual Transaction
     const [manualOpen, setManualOpen] = useState(false);
@@ -33,6 +43,26 @@ export function FinanceInterface({ stats, debtors, initialTransactions }: Financ
     const [manualDesc, setManualDesc] = useState("");
 
     const formatMoney = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+
+    const handleFilterChange = async (value: string) => {
+        setSupplierFilter(value);
+        const newTransactions = await getTransactions(value);
+        setTransactions(newTransactions);
+    };
+
+    const handleConfirmPayment = async () => {
+        if (!confirmTarget) return;
+        const res = await confirmTransactionPayment(confirmTarget.id, new Date(paymentDate));
+        if (res.success) {
+            setConfirmOpen(false);
+            setConfirmTarget(null);
+            // Refresh transactions
+            const newTransactions = await getTransactions(supplierFilter);
+            setTransactions(newTransactions);
+        } else {
+            alert("Lỗi xác nhận thanh toán");
+        }
+    };
 
     const handleSettle = async () => {
         if (!settleTarget) return;
@@ -44,8 +74,6 @@ export function FinanceInterface({ stats, debtors, initialTransactions }: Financ
         if (res.success) {
             setSettleOpen(false);
             setSettleAmount("");
-            // In a real app, we should update local state or router.refresh() 
-            // relying on router.refresh() from actions for now but a manual reload might be needed for instant UI feedback if not using useOptimistic
             window.location.reload();
         }
     };
@@ -138,7 +166,20 @@ export function FinanceInterface({ stats, debtors, initialTransactions }: Financ
                 </TabsContent>
 
                 <TabsContent value="transactions" className="space-y-4">
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-center">
+                        <div className="w-[200px]">
+                            <Select value={supplierFilter} onValueChange={handleFilterChange}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Lọc theo NCC" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="ALL">Tất cả NCC</SelectItem>
+                                    {suppliers.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <Button onClick={() => setManualOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Ghi Thu/Chi Ngoài</Button>
                     </div>
                     <Card>
@@ -165,6 +206,22 @@ export function FinanceInterface({ stats, debtors, initialTransactions }: Financ
                                                 Đối tượng: {t.customer?.name || t.supplier?.name}
                                             </p>
                                         )}
+                                        {t.type === "EXPENSE" && (
+                                            <div className="mt-1">
+                                                {(t as any).isPaid ? (
+                                                    <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-[10px]">
+                                                        Đã TT: {new Date((t as any).paidAt).toLocaleDateString('vi-VN')}
+                                                    </Badge>
+                                                ) : (
+                                                    <Button variant="ghost" size="sm" className="h-6 text-[10px] text-orange-600 bg-orange-50 hover:bg-orange-100" onClick={() => {
+                                                        setConfirmTarget(t);
+                                                        setConfirmOpen(true);
+                                                    }}>
+                                                        Chưa TT - Xác nhận ngay
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <span className={cn("font-bold", ["INCOME", "DEBT_COLLECTION"].includes(t.type) ? "text-green-600" : "text-red-600")}>
                                         {["INCOME", "DEBT_COLLECTION"].includes(t.type) ? "+" : "-"}{formatMoney(t.amount)}
@@ -175,6 +232,28 @@ export function FinanceInterface({ stats, debtors, initialTransactions }: Financ
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            {/* Confirm Payment Dialog */}
+            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận thanh toán</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label>Ngày thanh toán</Label>
+                            <Input
+                                type="date"
+                                value={paymentDate}
+                                onChange={(e) => setPaymentDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleConfirmPayment}>Xác nhận đã chi</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Settle Debt Dialog */}
             <Dialog open={settleOpen} onOpenChange={setSettleOpen}>

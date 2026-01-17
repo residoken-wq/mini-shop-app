@@ -107,6 +107,7 @@ model Order {
   type      String   // "SALE" or "PURCHASE"
   status    String   // "PENDING", "COMPLETED", "CANCELLED"
   total     Float
+  paid      Float    @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -164,6 +165,10 @@ model Transaction {
   amount      Float
   description String?
   date        DateTime @default(now())
+  
+  // Payment confirmation
+  isPaid      Boolean  @default(false)
+  paidAt      DateTime?
 
   customerId  String?
   customer    Customer? @relation(fields: [customerId], references: [id])
@@ -200,6 +205,16 @@ model ShopSettings {
   smtpFrom       String   @default("")
   notifyEmails   String   @default("")  // Comma-separated emails
   emailEnabled   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+// District management for HCMC with default shipping fees
+model District {
+  id          String   @id @default(cuid())
+  name        String   @unique  // Tên quận (Quận 1, Quận 2, Thủ Đức, ...)
+  shippingFee Int      @default(0)  // Phí vận chuyển mặc định
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 

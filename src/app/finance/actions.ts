@@ -99,8 +99,15 @@ export async function createManualTransaction(data: { type: "INCOME" | "EXPENSE"
     }
 }
 
-export async function getTransactions() {
+// Update getTransactions signature to accept filter
+export async function getTransactions(supplierId?: string | "ALL") {
+    const whereClause: any = {};
+    if (supplierId && supplierId !== "ALL") {
+        whereClause.supplierId = supplierId;
+    }
+
     return await db.transaction.findMany({
+        where: whereClause,
         orderBy: { date: "desc" },
         take: 50,
         include: {
@@ -108,4 +115,20 @@ export async function getTransactions() {
             supplier: { select: { name: true } }
         }
     });
+}
+
+export async function confirmTransactionPayment(transactionId: string, paidDate: Date) {
+    try {
+        await db.transaction.update({
+            where: { id: transactionId },
+            data: {
+                isPaid: true,
+                paidAt: paidDate
+            }
+        });
+        revalidatePath("/finance");
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Failed to confirm payment" };
+    }
 }
