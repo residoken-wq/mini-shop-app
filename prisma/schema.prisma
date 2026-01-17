@@ -45,6 +45,9 @@ model Product {
   unit       String    @default("kg") // e.g. "kg", "bó", "cái", "hộp"
   purchaseUnit   String?                    // Đơn vị nhập hàng (trái, thùng, bao)
   conversionRate Float   @default(1.0)      // Tỷ lệ quy đổi: 1 purchaseUnit = X unit
+  
+  saleUnit       String?                    // Đơn vị bán trên portal (trái, con)
+  saleRatio      Float   @default(1.0)      // Tỷ lệ quy đổi: 1 saleUnit = X unit (kg)
 
   orderItems OrderItem[]
   inventoryTransactions InventoryTransaction[]
