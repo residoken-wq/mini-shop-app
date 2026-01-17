@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Users, Phone, ArrowRight, AlertCircle, PackageSearch } from "lucide-react";
-import { searchWholesaleCustomer } from "../actions";
+import { findWholesaleCustomer } from "../actions";
 import { Customer } from "../types";
 
 interface CustomerTypeSelectionProps {
@@ -31,7 +31,7 @@ export function CustomerTypeSelection({
 
         setIsSearching(true);
         try {
-            const result = await searchWholesaleCustomer(phoneNumber);
+            const result = await findWholesaleCustomer(phoneNumber);
             if (result.success && result.customer) {
                 onSelectWholesale(result.customer);
             } else {

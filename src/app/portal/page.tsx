@@ -146,7 +146,6 @@ export default function PortalPage() {
                 recipientPhone: formData.recipientPhone,
                 deliveryAddress: formData.deliveryAddress,
                 note: formData.orderNote,
-                districtId: formData.selectedDistrict || undefined,
                 shippingFee: shippingFee,
                 paymentMethod: formData.paymentMethod,
             });
