@@ -48,7 +48,9 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
 
     const loadCarriers = async () => {
         const result = await getCarriers();
-        setCarriers(result as Carrier[]);
+        if (result.success && result.carriers) {
+            setCarriers(result.carriers);
+        }
     };
 
     const handleAddCarrier = async () => {
