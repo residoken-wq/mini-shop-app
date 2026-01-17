@@ -375,10 +375,16 @@ export async function getPendingOrdersSummary() {
 // ============ CARRIER MANAGEMENT ============
 
 export async function getCarriers() {
-    return await db.carrier.findMany({
-        where: { isActive: true },
-        orderBy: { name: "asc" }
-    });
+    try {
+        const carriers = await db.carrier.findMany({
+            where: { isActive: true },
+            orderBy: { name: "asc" }
+        });
+        return { success: true, carriers };
+    } catch (error) {
+        console.error("Failed to get carriers:", error);
+        return { success: false, error: "Failed to get carriers" };
+    }
 }
 
 export async function createCarrier(name: string, phone?: string) {
