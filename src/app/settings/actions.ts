@@ -70,3 +70,60 @@ export async function updateShopSettings(data: {
     }
 }
 
+// ============ CARRIER MANAGEMENT ============
+
+export async function getCarriers() {
+    return await db.carrier.findMany({
+        orderBy: { createdAt: "desc" }
+    });
+}
+
+export async function createCarrier(data: { name: string; phone?: string }) {
+    try {
+        const carrier = await db.carrier.create({
+            data: {
+                name: data.name,
+                phone: data.phone || null
+            }
+        });
+        revalidatePath("/settings");
+        revalidatePath("/orders");
+        return { success: true, carrier };
+    } catch (error) {
+        console.error("Create carrier error:", error);
+        return { success: false, error: "Lỗi tạo nhà vận chuyển" };
+    }
+}
+
+export async function updateCarrier(id: string, data: { name: string; phone?: string; isActive?: boolean }) {
+    try {
+        const carrier = await db.carrier.update({
+            where: { id },
+            data: {
+                name: data.name,
+                phone: data.phone || null,
+                isActive: data.isActive ?? true
+            }
+        });
+        revalidatePath("/settings");
+        revalidatePath("/orders");
+        return { success: true, carrier };
+    } catch (error) {
+        console.error("Update carrier error:", error);
+        return { success: false, error: "Lỗi cập nhật nhà vận chuyển" };
+    }
+}
+
+export async function deleteCarrier(id: string) {
+    try {
+        await db.carrier.delete({ where: { id } });
+        revalidatePath("/settings");
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Delete carrier error:", error);
+        return { success: false, error: "Lỗi xóa nhà vận chuyển" };
+    }
+}
+
+

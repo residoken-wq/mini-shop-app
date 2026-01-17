@@ -92,6 +92,15 @@ model Supplier {
   transactions Transaction[]
 }
 
+// Carrier model for shipping providers
+model Carrier {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Giao hàng nhanh", "Grab", "Tự giao"
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 model Order {
   id        String   @id @default(uuid())
   code      String   @unique // e.g. SO-20231225-01
@@ -117,6 +126,18 @@ model Order {
 
   // Discount amount
   discount         Float    @default(0)
+
+  // Shipping info (when status = SHIPPING)
+  carrierName      String?  // Tên nhà vận chuyển
+  shippingFee      Float    @default(0)  // Phí vận chuyển
+  shippingPaidBy   String   @default("CUSTOMER")  // "SHOP" or "CUSTOMER"
+  shippedAt        DateTime? // Thời điểm bắt đầu giao
+
+  // Return/Refund info (when status = COMPLETED)
+  returnedAmount   Float    @default(0)  // Giá trị hàng trả lại
+  refundAmount     Float    @default(0)  // Số tiền hoàn trả khách
+  returnNote       String?  // Ghi chú trả hàng
+  completedAt      DateTime? // Thời điểm hoàn tất
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])

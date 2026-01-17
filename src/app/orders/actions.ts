@@ -356,3 +356,120 @@ export async function getPendingOrdersSummary() {
         return { success: false, error: "Failed to get pending orders" };
     }
 }
+
+// ============ CARRIER MANAGEMENT ============
+
+export async function getCarriers() {
+    return await db.carrier.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" }
+    });
+}
+
+export async function createCarrier(name: string, phone?: string) {
+    try {
+        const carrier = await db.carrier.create({
+            data: { name, phone }
+        });
+        return { success: true, carrier };
+    } catch (error) {
+        console.error("Failed to create carrier:", error);
+        return { success: false, error: "Failed to create carrier" };
+    }
+}
+
+// ============ SHIPPING WORKFLOW ============
+
+// Start shipping - from READY to SHIPPING
+export async function startShipping(orderId: string, data: {
+    carrierName: string;
+    shippingFee: number;
+    shippingPaidBy: "SHOP" | "CUSTOMER";
+}) {
+    try {
+        const order = await db.order.findUnique({ where: { id: orderId } });
+        if (!order) {
+            return { success: false, error: "Order not found" };
+        }
+        if (order.status !== "READY") {
+            return { success: false, error: "Order must be in READY status" };
+        }
+
+        await db.order.update({
+            where: { id: orderId },
+            data: {
+                status: "SHIPPING",
+                carrierName: data.carrierName,
+                shippingFee: data.shippingFee,
+                shippingPaidBy: data.shippingPaidBy,
+                shippedAt: new Date()
+            }
+        });
+
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to start shipping:", error);
+        return { success: false, error: "Failed to start shipping" };
+    }
+}
+
+// Complete delivery - from SHIPPING to COMPLETED
+export async function completeDelivery(orderId: string, data: {
+    returnedAmount: number;
+    refundAmount: number;
+    returnNote?: string;
+}) {
+    try {
+        const order = await db.order.findUnique({
+            where: { id: orderId },
+            include: {
+                items: { include: { product: true } }
+            }
+        });
+
+        if (!order) {
+            return { success: false, error: "Order not found" };
+        }
+        if (order.status !== "SHIPPING") {
+            return { success: false, error: "Order must be in SHIPPING status" };
+        }
+
+        // Update order to COMPLETED
+        await db.order.update({
+            where: { id: orderId },
+            data: {
+                status: "COMPLETED",
+                returnedAmount: data.returnedAmount,
+                refundAmount: data.refundAmount,
+                returnNote: data.returnNote,
+                completedAt: new Date()
+            }
+        });
+
+        // Decrease stock for delivered items (full quantity - we track returns separately)
+        for (const item of order.items) {
+            await db.product.update({
+                where: { id: item.productId },
+                data: { stock: { decrement: item.quantity } }
+            });
+
+            await db.inventoryTransaction.create({
+                data: {
+                    productId: item.productId,
+                    quantity: -item.quantity,
+                    type: "OUT",
+                    note: `Delivered: Order #${order.code}`
+                }
+            });
+        }
+
+        revalidatePath("/orders");
+        revalidatePath("/products");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to complete delivery:", error);
+        return { success: false, error: "Failed to complete delivery" };
+    }
+}
+

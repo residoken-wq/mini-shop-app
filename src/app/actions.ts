@@ -14,8 +14,8 @@ export async function getDashboardStats() {
     const firstDayOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
-    // Total revenue this month (completed sales)
-    const revenueThisMonth = await db.order.aggregate({
+    // Completed sales this month with items for cost calculation
+    const completedSalesThisMonth = await db.order.findMany({
         where: {
             type: "SALE",
             status: "COMPLETED",
@@ -24,8 +24,35 @@ export async function getDashboardStats() {
                 lt: firstDayOfNextMonth
             }
         },
-        _sum: { total: true }
+        include: {
+            items: {
+                include: { product: true }
+            }
+        }
     });
+
+    // Calculate revenue, costs, and profit
+    let revenueThisMonth = 0;
+    let productCostThisMonth = 0;
+    let shippingCostShopPaysThisMonth = 0;
+    let shippingCostTotalThisMonth = 0;
+
+    for (const order of completedSalesThisMonth) {
+        revenueThisMonth += order.total;
+        shippingCostTotalThisMonth += order.shippingFee || 0;
+
+        // Shipping cost when shop pays
+        if (order.shippingPaidBy === "SHOP") {
+            shippingCostShopPaysThisMonth += order.shippingFee || 0;
+        }
+
+        // Product costs
+        for (const item of order.items) {
+            productCostThisMonth += (item.product.cost || 0) * item.quantity;
+        }
+    }
+
+    const profitThisMonth = revenueThisMonth - productCostThisMonth - shippingCostShopPaysThisMonth;
 
     // Revenue last month for comparison
     const revenueLastMonth = await db.order.aggregate({
@@ -95,16 +122,27 @@ export async function getDashboardStats() {
     });
 
     // Calculate revenue change percentage
-    const thisMonthTotal = revenueThisMonth._sum.total || 0;
     const lastMonthTotal = revenueLastMonth._sum.total || 0;
     const revenueChange = lastMonthTotal > 0
-        ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal * 100).toFixed(1)
+        ? ((revenueThisMonth - lastMonthTotal) / lastMonthTotal * 100).toFixed(1)
+        : "0";
+
+    // Profit margin
+    const profitMargin = revenueThisMonth > 0
+        ? ((profitThisMonth / revenueThisMonth) * 100).toFixed(1)
         : "0";
 
     return {
         revenue: {
-            thisMonth: thisMonthTotal,
+            thisMonth: revenueThisMonth,
             change: revenueChange
+        },
+        profit: {
+            thisMonth: profitThisMonth,
+            margin: profitMargin,
+            productCost: productCostThisMonth,
+            shippingCost: shippingCostShopPaysThisMonth,
+            totalShipping: shippingCostTotalThisMonth
         },
         orders: {
             today: ordersToday,
@@ -121,3 +159,4 @@ export async function getDashboardStats() {
         recentOrders
     };
 }
+

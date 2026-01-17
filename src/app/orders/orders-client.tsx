@@ -15,6 +15,8 @@ import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-con
 import { OrderReceipt } from "./order-receipt";
 import { OrderEditableItems } from "./order-editable-items";
 import { PendingOrdersPreparation } from "./pending-orders-preparation";
+import { ShippingDialog } from "./shipping-dialog";
+import { DeliveryDialog } from "./delivery-dialog";
 import html2canvas from "html2canvas";
 
 type OrderWithRelations = Order & {
@@ -35,6 +37,8 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
     const [isPrinting, setIsPrinting] = useState(false);
     const [viewMode, setViewMode] = useState<"receipt" | "edit">("receipt");
     const [showPreparation, setShowPreparation] = useState(false);
+    const [showShippingDialog, setShowShippingDialog] = useState(false);
+    const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
     const receiptRef = useRef<HTMLDivElement>(null);
 
     const refreshOrders = async () => {
@@ -321,27 +325,60 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                                     {selectedOrder.status !== "COMPLETED" && selectedOrder.status !== "CANCELLED" && (
                                         <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
                                             <span className="text-sm text-gray-500 mr-2">Chuyển sang:</span>
-                                            {getAllowedNextStatuses(selectedOrder.status).map(nextStatus => (
-                                                <Button
-                                                    key={nextStatus}
-                                                    size="sm"
-                                                    variant={nextStatus === "CANCELLED" ? "destructive" : "default"}
-                                                    onClick={async () => {
-                                                        const result = await updateOrderStatus(selectedOrder.id, nextStatus);
-                                                        if (result.success) {
-                                                            setOrders(prev => prev.map(o =>
-                                                                o.id === selectedOrder.id ? { ...o, status: nextStatus } : o
-                                                            ));
-                                                            setSelectedOrder({ ...selectedOrder, status: nextStatus });
-                                                        } else {
-                                                            alert("Lỗi cập nhật trạng thái");
-                                                        }
-                                                    }}
-                                                >
-                                                    {ORDER_STATUSES[nextStatus].label}
-                                                    <ChevronRight className="w-4 h-4 ml-1" />
-                                                </Button>
-                                            ))}
+                                            {getAllowedNextStatuses(selectedOrder.status).map(nextStatus => {
+                                                // For READY -> SHIPPING, open shipping dialog
+                                                if (selectedOrder.status === "READY" && nextStatus === "SHIPPING") {
+                                                    return (
+                                                        <Button
+                                                            key={nextStatus}
+                                                            size="sm"
+                                                            className="bg-orange-600 hover:bg-orange-700"
+                                                            onClick={() => setShowShippingDialog(true)}
+                                                        >
+                                                            <Truck className="w-4 h-4 mr-1" />
+                                                            Giao hàng
+                                                            <ChevronRight className="w-4 h-4 ml-1" />
+                                                        </Button>
+                                                    );
+                                                }
+                                                // For SHIPPING -> COMPLETED, open delivery dialog
+                                                if (selectedOrder.status === "SHIPPING" && nextStatus === "COMPLETED") {
+                                                    return (
+                                                        <Button
+                                                            key={nextStatus}
+                                                            size="sm"
+                                                            className="bg-green-600 hover:bg-green-700"
+                                                            onClick={() => setShowDeliveryDialog(true)}
+                                                        >
+                                                            <CheckCircle className="w-4 h-4 mr-1" />
+                                                            Hoàn tất
+                                                            <ChevronRight className="w-4 h-4 ml-1" />
+                                                        </Button>
+                                                    );
+                                                }
+                                                // Other status changes - direct update
+                                                return (
+                                                    <Button
+                                                        key={nextStatus}
+                                                        size="sm"
+                                                        variant={nextStatus === "CANCELLED" ? "destructive" : "default"}
+                                                        onClick={async () => {
+                                                            const result = await updateOrderStatus(selectedOrder.id, nextStatus);
+                                                            if (result.success) {
+                                                                setOrders(prev => prev.map(o =>
+                                                                    o.id === selectedOrder.id ? { ...o, status: nextStatus } : o
+                                                                ));
+                                                                setSelectedOrder({ ...selectedOrder, status: nextStatus });
+                                                            } else {
+                                                                alert("Lỗi cập nhật trạng thái");
+                                                            }
+                                                        }}
+                                                    >
+                                                        {ORDER_STATUSES[nextStatus].label}
+                                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                                    </Button>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -399,6 +436,48 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Shipping Dialog */}
+            {selectedOrder && (
+                <ShippingDialog
+                    open={showShippingDialog}
+                    onClose={() => setShowShippingDialog(false)}
+                    order={{
+                        id: selectedOrder.id,
+                        code: selectedOrder.code,
+                        recipientName: selectedOrder.recipientName,
+                        recipientPhone: selectedOrder.recipientPhone,
+                        deliveryAddress: selectedOrder.deliveryAddress,
+                        total: selectedOrder.total
+                    }}
+                    onSuccess={refreshOrders}
+                />
+            )}
+
+            {/* Delivery Dialog */}
+            {selectedOrder && (
+                <DeliveryDialog
+                    open={showDeliveryDialog}
+                    onClose={() => setShowDeliveryDialog(false)}
+                    order={{
+                        id: selectedOrder.id,
+                        code: selectedOrder.code,
+                        total: selectedOrder.total,
+                        paymentMethod: selectedOrder.paymentMethod,
+                        shippingFee: selectedOrder.shippingFee,
+                        shippingPaidBy: selectedOrder.shippingPaidBy,
+                        items: selectedOrder.items.map(item => ({
+                            id: item.id,
+                            productName: item.product.name,
+                            sku: item.product.sku,
+                            quantity: item.quantity,
+                            price: item.price,
+                            unit: item.product.unit
+                        }))
+                    }}
+                    onSuccess={refreshOrders}
+                />
+            )}
         </div>
     );
 }
