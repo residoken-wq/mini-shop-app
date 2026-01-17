@@ -225,7 +225,9 @@ export function ProductList({ initialProducts }: ProductListProps) {
             cost: (mp.price * 0.8).toString(), // Assume 20% margin
             stock: "0",
             unit: mp.unit || "kg",
-            imageUrl: mp.imageUrl || ""
+            imageUrl: mp.imageUrl || "",
+            saleUnit: "",
+            saleRatio: "1"
         });
         setIsMarketOpen(false);
         setIsCreateOpen(true);
