@@ -175,6 +175,8 @@ model Transaction {
 
   supplierId  String?
   supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  
+  paymentMethod String? // "CASH", "BANK", etc.
 }
 
 model InventoryTransaction {

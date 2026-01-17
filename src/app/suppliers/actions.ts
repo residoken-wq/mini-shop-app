@@ -69,10 +69,11 @@ export async function createPurchaseOrder(data: {
     supplierId?: string;
     items: { productId: string; quantity: number; price: number }[];
     total: number;
+    shippingFee?: number;
     paid: number;
     paymentMethod: string;
 }) {
-    const { supplierId, items, total, paid, paymentMethod } = data;
+    const { supplierId, items, total, shippingFee = 0, paid, paymentMethod } = data;
 
     try {
         const poCode = await generateCode("PO");
@@ -85,6 +86,7 @@ export async function createPurchaseOrder(data: {
                     type: "PURCHASE",
                     status: "PENDING",
                     total: total,
+                    shippingFee: shippingFee,
                     paid: paid,
                     supplierId: supplierId,
                     items: {
@@ -177,10 +179,12 @@ export async function getPurchaseOrders(supplierId?: string) {
 export async function paySupplierDebt(data: {
     supplierId: string;
     amount: number;
+    paymentMethod: string;
+    date: Date;
     note?: string;
 }) {
     try {
-        const { supplierId, amount, note } = data;
+        const { supplierId, amount, paymentMethod, date, note } = data;
 
         await db.$transaction(async (tx) => {
             // Decrease supplier debt
@@ -195,7 +199,11 @@ export async function paySupplierDebt(data: {
                     type: "DEBT_PAYMENT",
                     amount: amount,
                     description: note || "Trả nợ NCC",
-                    supplierId: supplierId
+                    supplierId: supplierId,
+                    paymentMethod: paymentMethod,
+                    date: date,
+                    isPaid: true, // Assuming debt payment is immediately paid
+                    paidAt: date
                 }
             });
         });

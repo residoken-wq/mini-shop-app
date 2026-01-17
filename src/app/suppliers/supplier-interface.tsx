@@ -34,6 +34,7 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
     const [supplierSearch, setSupplierSearch] = useState("");
     const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
     const [amountPaid, setAmountPaid] = useState("");
+    const [shippingFee, setShippingFee] = useState(0);
 
     // Supplier Create State
     const [newSupplierOpen, setNewSupplierOpen] = useState(false);
@@ -109,14 +110,15 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
     }
 
     const cartTotal = cart.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
+    const finalTotal = cartTotal + shippingFee;
 
     const handleCheckout = async () => {
         if (cart.length === 0) return;
 
-        const paid = amountPaid ? parseFloat(amountPaid) : cartTotal;
+        const paid = amountPaid ? parseFloat(amountPaid) : finalTotal;
 
         // Validation: Require supplier when not paying in full
-        if (paid < cartTotal && !selectedSupplier) {
+        if (paid < finalTotal && !selectedSupplier) {
             alert("Vui lòng chọn nhà cung cấp khi mua chịu (không trả đủ tiền)!");
             return;
         }
@@ -130,7 +132,8 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
                 quantity: item.quantity,
                 price: item.cost
             })),
-            total: cartTotal,
+            total: finalTotal,
+            shippingFee: shippingFee,
             paid: paid,
             paymentMethod: "CASH"
         });
@@ -141,7 +144,8 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
             setCart([]);
             setSelectedSupplier(null);
             setAmountPaid("");
-            const debtAmount = cartTotal - paid;
+            setShippingFee(0);
+            const debtAmount = finalTotal - paid;
             if (debtAmount > 0 && selectedSupplier) {
                 alert(`Đơn nhập hàng thành công!\nCông nợ NCC tăng: ${new Intl.NumberFormat('vi-VN').format(debtAmount)}đ`);
             } else {
@@ -306,11 +310,27 @@ export function SupplierInterface({ initialProducts, initialSuppliers }: Supplie
                     )}
                 </div>
 
-                {/* Totals & Checkout */}
                 <div className="p-4 border-t bg-muted/20 space-y-4">
-                    <div className="flex justify-between items-center text-lg font-bold">
-                        <span>Tổng tiền nhập:</span>
-                        <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}</span>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                            <span>Tiền hàng:</span>
+                            <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                            <span>Phí vận chuyển:</span>
+                            <div className="flex items-center gap-1">
+                                <Input
+                                    type="number"
+                                    className="h-7 w-24 text-right"
+                                    value={shippingFee}
+                                    onChange={(e) => setShippingFee(parseFloat(e.target.value) || 0)}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center text-lg font-bold pt-2 border-t">
+                            <span>Tổng cộng:</span>
+                            <span>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal + shippingFee)}</span>
+                        </div>
                     </div>
 
                     <div className="grid gap-2">
