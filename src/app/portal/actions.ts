@@ -4,6 +4,54 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { generateCode } from "@/lib/generators";
 
+// Get active promotions for portal banner and pricing
+export async function getActivePromotions() {
+    const now = new Date();
+
+    try {
+        const promotions = await db.promotion.findMany({
+            where: {
+                isActive: true,
+                startDate: { lte: now },
+                endDate: { gte: now }
+            },
+            include: {
+                products: {
+                    include: {
+                        product: {
+                            select: { id: true, name: true, price: true }
+                        },
+                        tiers: {
+                            orderBy: { minQuantity: "asc" }
+                        }
+                    }
+                }
+            },
+            orderBy: { startDate: "desc" }
+        });
+
+        return promotions.map(promo => ({
+            id: promo.id,
+            name: promo.name,
+            description: promo.description,
+            startDate: promo.startDate,
+            endDate: promo.endDate,
+            products: promo.products.map(pp => ({
+                productId: pp.productId,
+                productName: pp.product.name,
+                originalPrice: pp.product.price,
+                tiers: pp.tiers.map(t => ({
+                    minQuantity: t.minQuantity,
+                    price: t.price
+                }))
+            }))
+        }));
+    } catch (error) {
+        console.error("Error fetching active promotions:", error);
+        return [];
+    }
+}
+
 // Find wholesale customer by phone number (searches primary phone + phones array)
 export async function findWholesaleCustomer(phone: string) {
     if (!phone || phone.trim().length < 3) {

@@ -22,9 +22,11 @@ import {
     CreditCard,
     Banknote,
     QrCode,
-    PackageSearch
+    PackageSearch,
+    Gift,
+    Percent
 } from "lucide-react";
-import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders, getShopBankInfo, getActiveDistrictsForPortal } from "./actions";
+import { findWholesaleCustomer, getPortalProducts, submitPortalOrder, getCustomerPendingOrders, getShopBankInfo, getActiveDistrictsForPortal, getActivePromotions } from "./actions";
 import OrderTracking from "./order-tracking";
 import { getImageUrl } from "@/lib/image-utils";
 
@@ -51,6 +53,27 @@ interface Product {
 interface CartItem {
     product: Product;
     quantity: number;
+}
+
+interface PromotionTier {
+    minQuantity: number;
+    price: number;
+}
+
+interface PromotionProduct {
+    productId: string;
+    productName: string;
+    originalPrice: number;
+    tiers: PromotionTier[];
+}
+
+interface Promotion {
+    id: string;
+    name: string;
+    description: string | null;
+    startDate: Date;
+    endDate: Date;
+    products: PromotionProduct[];
 }
 
 export default function PortalPage() {
@@ -108,6 +131,9 @@ export default function PortalPage() {
         itemCount: number;
     }[]>([]);
 
+    // Active promotions
+    const [promotions, setPromotions] = useState<Promotion[]>([]);
+
     const loadProducts = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -118,10 +144,14 @@ export default function PortalPage() {
         }
     }, [customer?.id]);
 
-    // Load products when step 2 is reached
+    // Load products and promotions when step 2 is reached
     useEffect(() => {
         if (step === 2) {
             loadProducts();
+            // Load active promotions
+            getActivePromotions().then(promos => {
+                setPromotions(promos as Promotion[]);
+            });
         }
     }, [step, loadProducts]);
 
@@ -246,6 +276,48 @@ export default function PortalPage() {
         return new Intl.NumberFormat('vi-VN').format(value);
     };
 
+    // Get promotion info for a product (if any)
+    const getActivePromotionForProduct = (productId: string) => {
+        for (const promo of promotions) {
+            const promoProduct = promo.products.find(p => p.productId === productId);
+            if (promoProduct && promoProduct.tiers.length > 0) {
+                return { promo, promoProduct };
+            }
+        }
+        return null;
+    };
+
+    // Get the promotion price based on quantity
+    const getPromotionPrice = (productId: string, quantity: number): number | null => {
+        const promoInfo = getActivePromotionForProduct(productId);
+        if (!promoInfo) return null;
+
+        const { promoProduct } = promoInfo;
+        // Find the best tier for this quantity (highest minQuantity that we meet)
+        const applicableTiers = promoProduct.tiers.filter(t => quantity >= t.minQuantity);
+        if (applicableTiers.length === 0) return null;
+
+        // Get the tier with highest minQuantity (best price)
+        const bestTier = applicableTiers.reduce((best, tier) =>
+            tier.minQuantity > best.minQuantity ? tier : best
+        );
+        return bestTier.price;
+    };
+
+    // Get the effective price for a cart item (promotion price or displayPrice)
+    const getCartItemPrice = (productId: string, quantity: number, displayPrice: number): number => {
+        const promoPrice = getPromotionPrice(productId, quantity);
+        return promoPrice !== null ? promoPrice : displayPrice;
+    };
+
+    // Calculate cart total with promotion prices
+    const getProductTotalWithPromo = () => {
+        return cart.reduce((sum, item) => {
+            const price = getCartItemPrice(item.product.id, item.quantity, item.product.displayPrice);
+            return sum + (price * item.quantity);
+        }, 0);
+    };
+
     const handleSubmitOrder = async () => {
         if (hasExpiredItems) {
             alert("Có sản phẩm giá đã hết hạn. Vui lòng liên hệ shop.");
@@ -267,7 +339,7 @@ export default function PortalPage() {
                 items: cart.map(item => ({
                     productId: item.product.id,
                     quantity: item.quantity,
-                    price: item.product.displayPrice
+                    price: getCartItemPrice(item.product.id, item.quantity, item.product.displayPrice)
                 }))
             });
 
@@ -434,6 +506,46 @@ export default function PortalPage() {
                             <ArrowLeft className="w-4 h-4 mr-1" /> Đổi
                         </Button>
                     </div>
+
+                    {/* Promotion Banner */}
+                    {promotions.length > 0 && (
+                        <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg p-4 text-white shadow-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Gift className="w-5 h-5" />
+                                <h3 className="font-bold text-lg">🎉 KHUYẾN MÃI ĐANG DIỄN RA</h3>
+                            </div>
+                            {promotions.map(promo => (
+                                <div key={promo.id} className="bg-white/20 rounded-lg p-3 mt-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="font-semibold">{promo.name}</span>
+                                        <span className="text-xs bg-white/30 px-2 py-1 rounded">
+                                            Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
+                                        </span>
+                                    </div>
+                                    {promo.description && (
+                                        <p className="text-sm opacity-90 mb-2">{promo.description}</p>
+                                    )}
+                                    <div className="flex flex-wrap gap-2">
+                                        {promo.products.slice(0, 3).map(pp => (
+                                            <div key={pp.productId} className="bg-white/30 rounded px-2 py-1 text-xs">
+                                                <span className="font-medium">{pp.productName}</span>
+                                                {pp.tiers.length > 0 && (
+                                                    <span className="ml-1">
+                                                        - Mua {pp.tiers[0].minQuantity}+ chỉ {formatCurrency(pp.tiers[0].price)}đ
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {promo.products.length > 3 && (
+                                            <span className="text-xs opacity-80">
+                                                +{promo.products.length - 3} sản phẩm khác
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Pending Orders Section */}
                     {pendingOrders.length > 0 && (
