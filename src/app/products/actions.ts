@@ -116,8 +116,7 @@ export async function createProduct(data: any) {
 
 export async function updateProduct(id: string, data: any) {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { stock, ...updateData } = data; // Remove stock from update
+        const { stock: _stock, ...updateData } = data; // Remove stock from update
 
         const product = await db.product.update({
             where: { id },
