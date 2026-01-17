@@ -266,10 +266,6 @@ export default function PortalPage() {
         return cart.reduce((sum, item) => sum + (item.product.displayPrice * item.quantity), 0);
     };
 
-    const getFinalTotal = () => {
-        return getProductTotal() + shippingFee;
-    };
-
     const hasExpiredItems = cart.some(item => item.product.isExpired);
 
     const formatCurrency = (value: number) => {
@@ -316,6 +312,10 @@ export default function PortalPage() {
             const price = getCartItemPrice(item.product.id, item.quantity, item.product.displayPrice);
             return sum + (price * item.quantity);
         }, 0);
+    };
+
+    const getFinalTotal = () => {
+        return getProductTotalWithPromo() + shippingFee;
     };
 
     const handleSubmitOrder = async () => {
