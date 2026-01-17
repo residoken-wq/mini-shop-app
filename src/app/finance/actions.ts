@@ -119,19 +119,33 @@ export async function getTransactions(supplierId?: string | "ALL") {
 
 export async function confirmTransactionPayment(transactionId: string, paidDate: Date, paymentMethod: string) {
     try {
-        // Get current description
         const transaction = await db.transaction.findUnique({ where: { id: transactionId } });
-        const newDescription = transaction?.description ? `${transaction.description} - ${paymentMethod}` : `Chi phí - ${paymentMethod}`;
+        if (!transaction) return { success: false, error: "Transaction not found" };
 
-        await db.transaction.update({
-            where: { id: transactionId },
-            data: {
-                isPaid: true,
-                paidAt: paidDate,
-                description: newDescription
+        const newDescription = transaction.description ? `${transaction.description} - ${paymentMethod}` : `Chi phí - ${paymentMethod}`;
+
+        await db.$transaction(async (tx) => {
+            // 1. Mark as Paid
+            await tx.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    isPaid: true,
+                    paidAt: paidDate,
+                    description: newDescription
+                }
+            });
+
+            // 2. Reduce Debt if it's a Purchase/Expense related to a Supplier
+            if (transaction.supplierId && ["PURCHASE", "EXPENSE"].includes(transaction.type)) {
+                await tx.supplier.update({
+                    where: { id: transaction.supplierId },
+                    data: { debt: { decrement: transaction.amount } }
+                });
             }
         });
+
         revalidatePath("/finance");
+        revalidatePath("/suppliers");
         return { success: true };
     } catch (e) {
         return { success: false, error: "Failed to confirm payment" };

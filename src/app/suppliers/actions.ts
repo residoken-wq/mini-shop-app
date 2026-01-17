@@ -122,25 +122,23 @@ export async function createPurchaseOrder(data: {
             }
 
             // 3. Handle Supplier Debt (We owe them)
-            if (supplierId && paid < total) {
-                const debtAmount = total - paid;
+            if (supplierId) {
                 await tx.supplier.update({
                     where: { id: supplierId },
-                    data: { debt: { increment: debtAmount } }
+                    data: { debt: { increment: total } }
                 });
             }
 
-            // 4. Create Transaction Record (Expense)
-            if (paid > 0) {
-                await tx.transaction.create({
-                    data: {
-                        type: "EXPENSE",
-                        amount: paid,
-                        description: `Purchase #${order.id} - ${paymentMethod}`,
-                        supplierId: supplierId,
-                    }
-                });
-            }
+            // 4. Create Transaction Record (Purchase Slip - Unpaid)
+            await tx.transaction.create({
+                data: {
+                    type: "PURCHASE",
+                    amount: total,
+                    description: `Đơn mua hàng #${poCode}`,
+                    supplierId: supplierId,
+                    isPaid: false
+                }
+            });
 
             return order;
         });
@@ -264,6 +262,19 @@ export async function deleteCarrier(id: string) {
     } catch (error) {
         console.error("Delete carrier error:", error);
         return { success: false, error: "Lỗi xóa nhà vận chuyển" };
+    }
+}
+
+export async function updatePurchaseOrderStatus(orderId: string, status: string) {
+    try {
+        await db.order.update({
+            where: { id: orderId },
+            data: { status }
+        });
+        revalidatePath("/suppliers");
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Failed to update order status" };
     }
 }
 

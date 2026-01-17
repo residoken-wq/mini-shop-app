@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Eye, Truck, Package, CreditCard } from "lucide-react";
-import { paySupplierDebt } from "./actions";
+import { Search, Eye, Truck, Package, CreditCard, Check, X, Clock } from "lucide-react";
+import { paySupplierDebt, updatePurchaseOrderStatus } from "./actions";
 
 type PurchaseOrderWithRelations = Order & {
     supplier: Supplier | null;
@@ -66,6 +66,16 @@ export default function PurchaseHistory({ initialOrders, suppliers }: PurchaseHi
             window.location.reload();
         } else {
             alert("Lỗi: " + result.error);
+        }
+    };
+
+    const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+        const res = await updatePurchaseOrderStatus(orderId, newStatus);
+        if (res.success) {
+            // Optimistic update
+            setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        } else {
+            alert("Lỗi cập nhật trạng thái: " + res.error);
         }
     };
 
@@ -197,9 +207,34 @@ export default function PurchaseHistory({ initialOrders, suppliers }: PurchaseHi
                                             {new Intl.NumberFormat('vi-VN').format(order.total)}đ
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                                Hoàn thành
-                                            </Badge>
+                                            <div className="flex items-center gap-2">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        order.status === "COMPLETED"
+                                                            ? "bg-green-50 text-green-700 border-green-200"
+                                                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                                    }
+                                                >
+                                                    {order.status === "COMPLETED" ? "Hoàn thành" : "Chưa hoàn thành"}
+                                                </Badge>
+                                                {order.status !== "COMPLETED" && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        title="Đánh dấu hoàn thành"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm("Xác nhận đơn hàng đã hoàn thành?")) {
+                                                                handleUpdateStatus(order.id, "COMPLETED");
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Check className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">
                                             {new Date(order.createdAt).toLocaleDateString('vi-VN')}

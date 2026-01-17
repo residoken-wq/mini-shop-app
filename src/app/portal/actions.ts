@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { generateCode } from "@/lib/generators";
 
 // Find wholesale customer by phone number (searches primary phone + phones array)
 export async function findWholesaleCustomer(phone: string) {
@@ -181,16 +182,7 @@ export async function submitPortalOrder(data: {
         const total = data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
         // Generate order code
-        const today = new Date();
-        const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-        const orderCount = await db.order.count({
-            where: {
-                createdAt: {
-                    gte: new Date(today.getFullYear(), today.getMonth(), today.getDate())
-                }
-            }
-        });
-        const orderCode = `PO-${dateStr}-${String(orderCount + 1).padStart(2, '0')}`;
+        const orderCode = await generateCode("SO");
 
         // Create order
         const order = await db.order.create({

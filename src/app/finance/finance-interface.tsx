@@ -196,7 +196,8 @@ export function FinanceInterface({ stats, debtors, initialTransactions, supplier
                                             )}>
                                                 {t.type === "DEBT_COLLECTION" ? "THU NỢ" :
                                                     t.type === "DEBT_PAYMENT" ? "TRẢ NỢ" :
-                                                        t.type === "INCOME" ? "THU KHÁC" : "CHI KHÁC"}
+                                                        t.type === "INCOME" ? "THU KHÁC" :
+                                                            t.type === "PURCHASE" ? "MUA HÀNG" : "CHI KHÁC"}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
                                                 {new Date(t.date).toLocaleDateString('vi-VN')}
