@@ -36,11 +36,6 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
                             {promo.products.slice(0, 3).map((pp) => (
                                 <div key={pp.productId} className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
                                     <span className="font-medium">{pp.productName}</span>
-                                    {pp.tiers.length > 0 && (
-                                        <span className="ml-1">
-                                            - Mua {pp.tiers[0].minQuantity}+ chỉ {formatCurrency(pp.tiers[0].price)}đ
-                                        </span>
-                                    )}
                                 </div>
                             ))}
                             {promo.products.length > 3 && (
