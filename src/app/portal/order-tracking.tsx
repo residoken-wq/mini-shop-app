@@ -32,6 +32,8 @@ interface TrackedOrder {
     total: number;
     paid: number;
     discount: number;
+    shippingFee: number;
+    shippingPaidBy: string;
     paymentMethod: string;
     recipientName: string | null;
     recipientPhone: string | null;
