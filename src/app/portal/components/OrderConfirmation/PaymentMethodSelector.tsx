@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { CreditCard, QrCode, Wallet } from "lucide-react";
 import { BankInfo } from "../../types";
 
@@ -7,6 +8,8 @@ interface PaymentMethodSelectorProps {
     paymentMethod: "COD" | "QR" | "CREDIT";
     customerType: "retail" | "wholesale" | null;
     bankInfo: BankInfo | null;
+    totalAmount: number;
+    description?: string;
     onPaymentMethodChange: (method: "COD" | "QR" | "CREDIT") => void;
 }
 
@@ -14,8 +17,30 @@ export function PaymentMethodSelector({
     paymentMethod,
     customerType,
     bankInfo,
+    totalAmount,
+    description,
     onPaymentMethodChange,
 }: PaymentMethodSelectorProps) {
+
+    // Generate VietQR URL
+    const getVietQRUrl = () => {
+        if (!bankInfo?.bankAccount || !bankInfo?.bankName) return null;
+        const bankCodes: Record<string, string> = {
+            'Vietcombank': 'VCB', 'VCB': 'VCB',
+            'Techcombank': 'TCB', 'TCB': 'TCB',
+            'MB Bank': 'MB', 'MB': 'MB', 'BIDV': 'BIDV',
+            'Agribank': 'VBA', 'VBA': 'VBA', 'ACB': 'ACB',
+            'VPBank': 'VPB', 'VPB': 'VPB',
+            'Sacombank': 'STB', 'STB': 'STB',
+            'TPBank': 'TPB', 'TPB': 'TPB',
+            'Vietinbank': 'CTG', 'CTG': 'CTG',
+        };
+        const bankCode = bankCodes[bankInfo.bankName] || bankInfo.bankName.toUpperCase();
+        // Use provided description or default text
+        const info = encodeURIComponent(description || "Thanh toan don hang");
+        return `https://img.vietqr.io/image/${bankCode}-${bankInfo.bankAccount}-compact2.png?amount=${totalAmount}&addInfo=${info}&accountName=${encodeURIComponent(bankInfo.bankOwner)}`;
+    };
+
     return (
         <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
             <div className="flex items-center gap-2 text-gray-700 mb-2">
@@ -30,8 +55,8 @@ export function PaymentMethodSelector({
                 <button
                     onClick={() => onPaymentMethodChange("COD")}
                     className={`p-4 rounded-xl border-2 transition-all ${paymentMethod === "COD"
-                            ? "border-purple-500 bg-purple-50"
-                            : "border-gray-200 hover:border-gray-300"
+                        ? "border-purple-500 bg-purple-50"
+                        : "border-gray-200 hover:border-gray-300"
                         }`}
                 >
                     <div className="flex flex-col items-center gap-2">
@@ -47,8 +72,8 @@ export function PaymentMethodSelector({
                 <button
                     onClick={() => onPaymentMethodChange("QR")}
                     className={`p-4 rounded-xl border-2 transition-all ${paymentMethod === "QR"
-                            ? "border-purple-500 bg-purple-50"
-                            : "border-gray-200 hover:border-gray-300"
+                        ? "border-purple-500 bg-purple-50"
+                        : "border-gray-200 hover:border-gray-300"
                         }`}
                 >
                     <div className="flex flex-col items-center gap-2">
@@ -65,10 +90,10 @@ export function PaymentMethodSelector({
                     onClick={() => customerType === "wholesale" && onPaymentMethodChange("CREDIT")}
                     disabled={customerType !== "wholesale"}
                     className={`p-4 rounded-xl border-2 transition-all ${paymentMethod === "CREDIT"
-                            ? "border-purple-500 bg-purple-50"
-                            : customerType === "wholesale"
-                                ? "border-gray-200 hover:border-gray-300"
-                                : "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                        ? "border-purple-500 bg-purple-50"
+                        : customerType === "wholesale"
+                            ? "border-gray-200 hover:border-gray-300"
+                            : "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
                         }`}
                 >
                     <div className="flex flex-col items-center gap-2">
@@ -85,11 +110,36 @@ export function PaymentMethodSelector({
             {paymentMethod === "QR" && bankInfo && (
                 <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                     <h4 className="font-medium text-blue-800 mb-2">Thông tin chuyển khoản:</h4>
-                    <div className="space-y-1 text-sm">
-                        <p><span className="text-gray-600">Ngân hàng:</span> <span className="font-medium">{bankInfo.bankName}</span></p>
-                        <p><span className="text-gray-600">Số TK:</span> <span className="font-medium">{bankInfo.bankAccount}</span></p>
-                        <p><span className="text-gray-600">Chủ TK:</span> <span className="font-medium">{bankInfo.bankOwner}</span></p>
+
+                    <div className="mb-4 flex justify-center">
+                        {getVietQRUrl() && (
+                            <div className="bg-white p-2 rounded-lg shadow-sm">
+                                <Image
+                                    src={getVietQRUrl()!}
+                                    alt="QR Code thanh toán"
+                                    width={200}
+                                    height={200}
+                                    className="rounded-lg"
+                                    unoptimized
+                                />
+                            </div>
+                        )}
                     </div>
+
+                    <div className="space-y-1 text-sm bg-white/50 p-3 rounded-lg">
+                        <p className="flex justify-between"><span className="text-gray-600">Ngân hàng:</span> <span className="font-medium">{bankInfo.bankName}</span></p>
+                        <p className="flex justify-between"><span className="text-gray-600">Số TK:</span> <span className="font-mono font-bold text-lg text-blue-700">{bankInfo.bankAccount}</span></p>
+                        <p className="flex justify-between"><span className="text-gray-600">Chủ TK:</span> <span className="font-medium">{bankInfo.bankOwner}</span></p>
+                        <p className="flex justify-between pt-2 border-t border-blue-100 mt-2">
+                            <span className="text-gray-600">Số tiền:</span>
+                            <span className="font-bold text-lg text-purple-600">
+                                {new Intl.NumberFormat('vi-VN').format(totalAmount)}đ
+                            </span>
+                        </p>
+                    </div>
+                    <p className="text-xs text-center text-blue-600 mt-2 italic">
+                        * Quét mã QR trên ứng dụng ngân hàng để thanh toán nhanh
+                    </p>
                 </div>
             )}
         </div>

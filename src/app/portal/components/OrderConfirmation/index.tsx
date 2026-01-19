@@ -144,6 +144,8 @@ export function OrderConfirmation({
                 paymentMethod={formData.paymentMethod}
                 customerType={customerType}
                 bankInfo={bankInfo}
+                totalAmount={finalTotal}
+                description={`Thanh toan ${formData.recipientPhone || customer?.phone || 'don hang'}`}
                 onPaymentMethodChange={(method) => onFormDataChange({ paymentMethod: method })}
             />
 
