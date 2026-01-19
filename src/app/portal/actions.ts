@@ -408,6 +408,8 @@ export async function trackOrdersByPhone(phone: string) {
             total: order.total,
             paid: order.paid || 0,
             discount: order.discount || 0,
+            shippingFee: order.shippingFee || 0,
+            shippingPaidBy: order.shippingPaidBy,
             paymentMethod: order.paymentMethod,
             recipientName: order.recipientName,
             recipientPhone: order.recipientPhone,

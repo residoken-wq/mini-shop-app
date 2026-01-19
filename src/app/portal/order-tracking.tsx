@@ -320,57 +320,65 @@ export default function OrderTracking() {
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-500">Trạng thái:</span>
                                                 {order.paid >= order.total || order.status === "COMPLETED" ? (
-                                                    <Badge className="bg-green-100 text-green-700 text-xs">
+                                                    <Badge className="bg-green-100 text-green-700 text-xs text-nowrap">
                                                         <CheckCircle className="w-3 h-3 mr-1" />
                                                         Đã thanh toán
                                                     </Badge>
                                                 ) : order.paid > 0 ? (
-                                                    <Badge className="bg-blue-100 text-blue-700 text-xs">
+                                                    <Badge className="bg-blue-100 text-blue-700 text-xs text-nowrap">
                                                         <CreditCard className="w-3 h-3 mr-1" />
-                                                        Đã thanh toán một phần
+                                                        Thanh toán 1 phần
                                                     </Badge>
                                                 ) : (
-                                                    <Badge className="bg-yellow-100 text-yellow-700 text-xs">
+                                                    <Badge className="bg-yellow-100 text-yellow-700 text-xs text-nowrap">
                                                         <Clock className="w-3 h-3 mr-1" />
                                                         Chưa thanh toán
                                                     </Badge>
                                                 )}
                                             </div>
 
-                                            {/* Show paid amount if partially paid */}
-                                            {order.paid > 0 && order.paid < order.total && (
-                                                <>
-                                                    <div className="flex justify-between text-green-600">
-                                                        <span>✓ Đã thanh toán:</span>
-                                                        <span className="font-medium">{formatCurrency(order.paid)}đ</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-orange-600">
-                                                        <span>⏳ Còn lại:</span>
-                                                        <span className="font-bold">{formatCurrency(order.total - order.paid)}đ</span>
-                                                    </div>
-                                                </>
-                                            )}
+                                            {/* Order Summary Breakdown */}
+                                            <div className="space-y-1 pt-2 border-t text-sm">
+                                                <div className="flex justify-between text-gray-600">
+                                                    <span>Tạm tính:</span>
+                                                    <span>{formatCurrency(order.total + order.discount - (order.shippingFee || 0))}đ</span>
+                                                </div>
 
-                                            {/* Show discount when READY or later and discount > 0 */}
-                                            {order.discount > 0 && ["READY", "SHIPPING", "COMPLETED"].includes(order.status) && (
-                                                <>
+                                                {order.shippingFee > 0 && (
                                                     <div className="flex justify-between text-gray-600">
-                                                        <span>Tạm tính:</span>
-                                                        <span>{formatCurrency(order.total + order.discount)}đ</span>
+                                                        <span>Phí vận chuyển:</span>
+                                                        <span>{formatCurrency(order.shippingFee)}đ</span>
                                                     </div>
+                                                )}
+
+                                                {order.discount > 0 && (
                                                     <div className="flex justify-between text-orange-600">
                                                         <span>🏷️ Giảm giá:</span>
                                                         <span className="font-medium">-{formatCurrency(order.discount)}đ</span>
                                                     </div>
-                                                </>
-                                            )}
+                                                )}
 
-                                            <div className="flex justify-between pt-2 border-t">
-                                                <span className="font-medium">Thành tiền:</span>
-                                                <span className="font-bold text-purple-600">{formatCurrency(order.total)}đ</span>
+                                                <div className="flex justify-between font-medium text-base pt-2 border-t">
+                                                    <span>Tổng tiền:</span>
+                                                    <span className="text-purple-600">{formatCurrency(order.total)}đ</span>
+                                                </div>
+
+                                                {order.paid > 0 && (
+                                                    <div className="flex justify-between text-green-600 font-medium">
+                                                        <span>✓ Đã thanh toán:</span>
+                                                        <span>{formatCurrency(order.paid)}đ</span>
+                                                    </div>
+                                                )}
+
+                                                {(order.total - order.paid) > 0 && (
+                                                    <div className="flex justify-between text-orange-600 font-bold">
+                                                        <span>⏳ Còn lại:</span>
+                                                        <span>{formatCurrency(order.total - order.paid)}đ</span>
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {/* QR Payment Button - only show if not fully paid and payment method is QR */}
+                                            {/* QR Payment Button */}
                                             {order.paid < order.total && order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
                                                 <div className="pt-3 border-t mt-3">
                                                     <Button
@@ -413,7 +421,6 @@ export default function OrderTracking() {
                         </div>
                     ))}
 
-                    {/* Thank You Message */}
                     <div className="text-center py-6 px-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
                         <p className="text-purple-700 font-medium">
                             🙏 Cảm ơn Quý khách đã ủng hộ!
@@ -424,6 +431,5 @@ export default function OrderTracking() {
                     </div>
                 </div>
             )}
-        </div>
-    );
+            );
 }
