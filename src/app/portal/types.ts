@@ -59,6 +59,7 @@ export type CustomerType = "retail" | "wholesale" | null;
 export interface Customer {
     id: string;
     name: string;
+    phone?: string | null;
 }
 
 // Pending order type
