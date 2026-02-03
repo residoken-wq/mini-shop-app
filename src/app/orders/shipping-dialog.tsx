@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,6 +40,7 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
     const [isAddingCarrier, setIsAddingCarrier] = useState(false);
     const [newCarrierName, setNewCarrierName] = useState("");
     const [newCarrierPhone, setNewCarrierPhone] = useState("");
+    const [deliveryNote, setDeliveryNote] = useState("");
 
     useEffect(() => {
         if (open) {
@@ -77,7 +79,8 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
         const result = await startShipping(order.id, {
             carrierName: selectedCarrier,
             shippingFee,
-            shippingPaidBy
+            shippingPaidBy,
+            deliveryNote: deliveryNote.trim() || undefined
         });
 
         if (result.success) {
@@ -219,6 +222,17 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
                                 🏪 Shop trả
                             </Button>
                         </div>
+                    </div>
+
+                    {/* Delivery Note */}
+                    <div className="space-y-2">
+                        <Label>Ghi chú giao hàng</Label>
+                        <Textarea
+                            value={deliveryNote}
+                            onChange={(e) => setDeliveryNote(e.target.value)}
+                            placeholder="Ghi chú cho nhà vận chuyển (vd: giao buổi sáng, gọi trước khi giao...)"
+                            rows={2}
+                        />
                     </div>
 
                     {/* Summary */}

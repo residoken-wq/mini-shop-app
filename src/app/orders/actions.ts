@@ -586,6 +586,7 @@ export async function startShipping(orderId: string, data: {
     carrierName: string;
     shippingFee: number;
     shippingPaidBy: "SHOP" | "CUSTOMER";
+    deliveryNote?: string;
 }) {
     try {
         const order = await db.order.findUnique({ where: { id: orderId } });
@@ -603,6 +604,7 @@ export async function startShipping(orderId: string, data: {
                 carrierName: data.carrierName,
                 shippingFee: data.shippingFee,
                 shippingPaidBy: data.shippingPaidBy,
+                deliveryNote: data.deliveryNote || null,
                 shippedAt: new Date()
             }
         });

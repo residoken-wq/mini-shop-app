@@ -142,6 +142,7 @@ model Order {
   shippingFee      Float    @default(0)  // Phí vận chuyển
   shippingPaidBy   String   @default("CUSTOMER")  // "SHOP" or "CUSTOMER"
   shippedAt        DateTime? // Thời điểm bắt đầu giao
+  deliveryNote     String?  // Ghi chú giao hàng
 
   // Return/Refund info (when status = COMPLETED)
   returnedAmount   Float    @default(0)  // Giá trị hàng trả lại

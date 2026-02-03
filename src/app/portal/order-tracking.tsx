@@ -38,6 +38,8 @@ interface TrackedOrder {
     recipientName: string | null;
     recipientPhone: string | null;
     deliveryAddress: string | null;
+    carrierName: string | null;
+    deliveryNote: string | null;
     createdAt: Date;
     items: { name: string; quantity: number; price: number }[];
 }
@@ -285,6 +287,21 @@ export default function OrderTracking() {
                                                         <MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
                                                         <span>{order.deliveryAddress}</span>
                                                     </p>
+                                                )}
+                                                {order.carrierName && (
+                                                    <p className="flex items-center gap-1 pt-1 border-t mt-1">
+                                                        <Truck className="w-4 h-4 text-orange-500" />
+                                                        <span className="text-gray-500">Đơn vị vận chuyển:</span>
+                                                        <span className="font-medium">{order.carrierName}</span>
+                                                    </p>
+                                                )}
+                                                {order.deliveryNote && (
+                                                    <div className="pt-2 border-t mt-2">
+                                                        <p className="text-gray-500 text-xs mb-1">📝 Ghi chú giao hàng:</p>
+                                                        <p className="bg-yellow-50 text-yellow-800 p-2 rounded border border-yellow-200 text-xs">
+                                                            {order.deliveryNote}
+                                                        </p>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

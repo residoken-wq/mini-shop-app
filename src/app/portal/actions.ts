@@ -421,6 +421,8 @@ export async function trackOrdersByPhone(phone: string) {
             recipientName: order.recipientName,
             recipientPhone: order.recipientPhone,
             deliveryAddress: order.deliveryAddress,
+            carrierName: order.carrierName,
+            deliveryNote: order.deliveryNote,
             createdAt: order.createdAt,
             items: order.items.map(item => ({
                 name: item.product.name,
