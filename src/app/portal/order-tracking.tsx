@@ -219,8 +219,8 @@ export default function OrderTracking() {
                                         {(["PENDING", "PROCESSING", "READY", "SHIPPING", "COMPLETED"] as const).map((status, idx) => {
                                             const statusInfo = ORDER_STATUSES[status];
                                             const currentStep = order.statusInfo.step || 0;
-                                            const isActive = statusInfo.step <= currentStep;
-                                            const isCurrent = order.status === status;
+                                            const isCompleted = statusInfo.step < currentStep; // Steps before current
+                                            const isCurrent = statusInfo.step === currentStep; // Current step
                                             const isCancelled = order.status === "CANCELLED";
 
                                             return (
@@ -229,14 +229,14 @@ export default function OrderTracking() {
                                                         "w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold transition-all",
                                                         isCancelled ? "bg-gray-200 text-gray-400" :
                                                             isCurrent ? "bg-purple-500 text-white ring-2 ring-purple-200" :
-                                                                isActive ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
+                                                                isCompleted ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
                                                     )}>
-                                                        {isActive && !isCancelled ? <CheckCircle className="w-3 h-3 md:w-4 md:h-4" /> : idx + 1}
+                                                        {isCompleted && !isCancelled ? <CheckCircle className="w-3 h-3 md:w-4 md:h-4" /> : idx + 1}
                                                     </div>
                                                     {idx < 4 && (
                                                         <div className={cn(
                                                             "w-4 md:w-8 h-0.5 mx-0.5",
-                                                            !isCancelled && statusInfo.step < currentStep ? "bg-green-500" : "bg-gray-200"
+                                                            !isCancelled && isCompleted ? "bg-green-500" : "bg-gray-200"
                                                         )} />
                                                     )}
                                                 </div>
