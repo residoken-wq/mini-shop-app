@@ -14,6 +14,7 @@ interface UseCartReturn {
     setQuantity: (productId: string, qty: number) => void;
     removeFromCart: (productId: string) => void;
     clearCart: () => void;
+    updateCartProducts: (freshProducts: Product[]) => void;
     getProductTotal: () => number;
     getProductTotalWithPromo: () => number;
     getFinalTotal: (shippingFee: number) => number;
@@ -102,6 +103,17 @@ export function useCart({ promotions }: UseCartProps): UseCartReturn {
         setCart([]);
     }, []);
 
+    // Update cart products with fresh data (e.g., when wholesale prices are loaded)
+    const updateCartProducts = useCallback((freshProducts: Product[]) => {
+        setCart(prevCart => prevCart.map(item => {
+            const freshProduct = freshProducts.find(p => p.id === item.product.id);
+            if (freshProduct) {
+                return { ...item, product: freshProduct };
+            }
+            return item;
+        }));
+    }, []);
+
     const getProductTotal = useCallback(() => {
         return cart.reduce((sum, item) => {
             const ratio = item.product.saleUnit ? (item.product.saleRatio || 1) : 1;
@@ -139,6 +151,7 @@ export function useCart({ promotions }: UseCartProps): UseCartReturn {
         setQuantity,
         removeFromCart,
         clearCart,
+        updateCartProducts,
         getProductTotal,
         getProductTotalWithPromo,
         getFinalTotal,

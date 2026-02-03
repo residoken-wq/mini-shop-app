@@ -45,6 +45,7 @@ export default function PortalPage() {
         setQuantity,
         removeFromCart,
         clearCart,
+        updateCartProducts,
         getProductTotal,
         getProductTotalWithPromo,
         getFinalTotal,
@@ -227,6 +228,7 @@ export default function PortalPage() {
                     onUpdateQuantity={updateQuantity}
                     onSetQuantity={setQuantity}
                     onRemoveFromCart={removeFromCart}
+                    onUpdateCartProducts={updateCartProducts}
                     getPromotionPrice={getPromotionPrice}
                     getProductTotal={getProductTotal}
                 />

@@ -74,3 +74,34 @@ export async function deleteCustomer(id: string) {
         return { success: false, error: "Failed to delete customer" };
     }
 }
+// Recalculate customer debt based on completed orders
+export async function recalculateCustomerDebt(id: string) {
+    try {
+        // Find all COMPLETED SALE orders for this customer
+        const orders = await db.order.findMany({
+            where: {
+                customerId: id,
+                status: "COMPLETED",
+                type: "SALE"
+            }
+        });
+
+        // Calculate total unpaid amount
+        const calculatedDebt = orders.reduce((sum, order) => {
+            const unpaid = Math.max(0, order.total - order.paid);
+            return sum + unpaid;
+        }, 0);
+
+        // Update customer debt
+        await db.customer.update({
+            where: { id },
+            data: { debt: calculatedDebt }
+        });
+
+        revalidatePath("/customers");
+        return { success: true, debt: calculatedDebt };
+    } catch (error) {
+        console.error("Recalculate debt error:", error);
+        return { success: false, error: "Failed to recalculate debt" };
+    }
+}

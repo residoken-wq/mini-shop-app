@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Plus, Search, User, MapPin, Phone, FileText } from "lucide-react";
-import { createCustomer, updateCustomer, deleteCustomer } from "./actions";
+import { Edit, Trash2, Plus, Search, User, MapPin, Phone, FileText, RefreshCw } from "lucide-react";
+import { createCustomer, updateCustomer, deleteCustomer, recalculateCustomerDebt } from "./actions";
 import Link from "next/link";
 
 interface CustomersClientProps {
@@ -130,6 +130,17 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
         }
     };
 
+    const handleRecalculateDebt = async (id: string) => {
+        if (!confirm("Cập nhật lại công nợ từ các đơn hàng?")) return;
+        const res = await recalculateCustomerDebt(id);
+        if (res.success) {
+            setCustomers(customers.map(c => c.id === id ? { ...c, debt: res.debt! } : c));
+            alert("Đã cập nhật công nợ: " + new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(res.debt!));
+        } else {
+            alert("Lỗi: " + res.error);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -218,6 +229,9 @@ export default function CustomersClient({ initialCustomers }: CustomersClientPro
                                                 </Button>
                                             </Link>
                                         )}
+                                        <Button variant="ghost" size="icon" title="Cập nhật công nợ" onClick={() => handleRecalculateDebt(c.id)}>
+                                            <RefreshCw className="h-4 w-4" />
+                                        </Button>
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(c)}>
                                             <Edit className="h-4 w-4" />
                                         </Button>

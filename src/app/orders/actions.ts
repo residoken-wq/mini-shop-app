@@ -36,37 +36,108 @@ export async function getOrderById(id: string) {
 
 export async function updateOrderStatus(id: string, status: string) {
     try {
-        const order = await db.order.update({
+        // 1. Fetch current order to check previous status
+        const currentOrder = await db.order.findUnique({
             where: { id },
-            data: { status },
-            include: {
-                items: {
-                    include: { product: true }
-                }
-            }
+            include: { items: true }
         });
 
-        // When order is COMPLETED, decrease stock
-        if (status === "COMPLETED" && order.type === "SALE") {
-            for (const item of order.items) {
-                await db.product.update({
-                    where: { id: item.productId },
-                    data: { stock: { decrement: item.quantity } }
+        if (!currentOrder) {
+            return { success: false, error: "Order not found" };
+        }
+
+        // 2. Handle State Transitions
+        const isBecomingCompleted = status === "COMPLETED" && currentOrder.status !== "COMPLETED";
+        const isLeavingCompleted = currentOrder.status === "COMPLETED" && status !== "COMPLETED";
+
+        // Logic for SALE orders
+        if (currentOrder.type === "SALE") {
+            // Case A: Becoming COMPLETED
+            if (isBecomingCompleted) {
+                // A1. Decrease Stock
+                for (const item of currentOrder.items) {
+                    await db.product.update({
+                        where: { id: item.productId },
+                        data: { stock: { decrement: item.quantity } }
+                    });
+
+                    await db.inventoryTransaction.create({
+                        data: {
+                            productId: item.productId,
+                            quantity: -item.quantity,
+                            type: "OUT",
+                            note: `Sale Order #${currentOrder.code}`
+                        }
+                    });
+                }
+
+                // A2. Handle Debt (Unpaid Amount)
+                if (currentOrder.customerId && currentOrder.paid < currentOrder.total) {
+                    const debtAmount = currentOrder.total - currentOrder.paid;
+                    await db.customer.update({
+                        where: { id: currentOrder.customerId },
+                        data: { debt: { increment: debtAmount } }
+                    });
+                }
+
+                // A3. Create Transaction for Income (Paid Amount)
+                if (currentOrder.paid > 0) {
+                    await db.transaction.create({
+                        data: {
+                            type: "INCOME",
+                            amount: currentOrder.paid,
+                            description: `Order #${currentOrder.code} - Payment`,
+                            customerId: currentOrder.customerId,
+                            paymentMethod: currentOrder.paymentMethod
+                        }
+                    });
+                }
+            }
+
+            // Case B: Leaving COMPLETED (Reversal)
+            if (isLeavingCompleted) {
+                // B1. Restore Stock
+                for (const item of currentOrder.items) {
+                    await db.product.update({
+                        where: { id: item.productId },
+                        data: { stock: { increment: item.quantity } }
+                    });
+                }
+                // Delete inventory transactions
+                await db.inventoryTransaction.deleteMany({
+                    where: { note: { contains: currentOrder.code } }
                 });
 
-                await db.inventoryTransaction.create({
-                    data: {
-                        productId: item.productId,
-                        quantity: -item.quantity,
-                        type: "OUT",
-                        note: `Sale Order #${order.code}`
-                    }
-                });
+                // B2. Reverse Debt
+                if (currentOrder.customerId && currentOrder.paid < currentOrder.total) {
+                    const debtAmount = currentOrder.total - currentOrder.paid;
+                    await db.customer.update({
+                        where: { id: currentOrder.customerId },
+                        data: { debt: { decrement: debtAmount } }
+                    });
+                }
+
+                // B3. Delete Income Transaction
+                if (currentOrder.paid > 0) {
+                    await db.transaction.deleteMany({
+                        where: {
+                            description: { contains: currentOrder.code },
+                            type: "INCOME"
+                        }
+                    });
+                }
             }
         }
 
+        // 3. Update Order Status
+        await db.order.update({
+            where: { id },
+            data: { status },
+        });
+
         revalidatePath("/orders");
         revalidatePath("/products");
+        revalidatePath("/customers");
         return { success: true };
     } catch (error) {
         console.error("Failed to update order status:", error);
@@ -76,6 +147,44 @@ export async function updateOrderStatus(id: string, status: string) {
 
 export async function deleteOrder(id: string) {
     try {
+        // Get order details first to check status and get relations
+        const order = await db.order.findUnique({
+            where: { id },
+            include: {
+                items: true,
+                customer: true
+            }
+        });
+
+        if (!order) {
+            return { success: false, error: "Order not found" };
+        }
+
+        // If order was completed SALE, reverse debt and stock changes
+        if (order.status === "COMPLETED" && order.type === "SALE") {
+            // Reverse debt if customer had unpaid amount
+            if (order.customerId && order.paid < order.total) {
+                const debtAmount = order.total - order.paid;
+                await db.customer.update({
+                    where: { id: order.customerId },
+                    data: { debt: { decrement: debtAmount } }
+                });
+            }
+
+            // Restore stock for each item
+            for (const item of order.items) {
+                await db.product.update({
+                    where: { id: item.productId },
+                    data: { stock: { increment: item.quantity } }
+                });
+            }
+
+            // Delete inventory transactions related to this order
+            await db.inventoryTransaction.deleteMany({
+                where: { note: { contains: order.code } }
+            });
+        }
+
         // Delete order items first (due to relation)
         await db.orderItem.deleteMany({
             where: { orderId: id }
@@ -86,8 +195,11 @@ export async function deleteOrder(id: string) {
         });
 
         revalidatePath("/orders");
+        revalidatePath("/customers");
+        revalidatePath("/products");
         return { success: true };
     } catch (error) {
+        console.error("Failed to delete order:", error);
         return { success: false, error: "Failed to delete order" };
     }
 }

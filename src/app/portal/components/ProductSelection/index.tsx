@@ -23,6 +23,7 @@ interface ProductSelectionProps {
     onUpdateQuantity: (productId: string, delta: number) => void;
     onSetQuantity: (productId: string, qty: number) => void;
     onRemoveFromCart: (productId: string) => void;
+    onUpdateCartProducts: (freshProducts: Product[]) => void;
     getPromotionPrice: (productId: string, quantity: number) => number | null;
     getProductTotal: () => number;
 }
@@ -39,6 +40,7 @@ export function ProductSelection({
     onUpdateQuantity,
     onSetQuantity,
     onRemoveFromCart,
+    onUpdateCartProducts,
     getPromotionPrice,
     getProductTotal,
 }: ProductSelectionProps) {
@@ -53,10 +55,12 @@ export function ProductSelection({
         try {
             const data = await getPortalProducts(customer?.id);
             setProducts(data);
+            // Sync cart items with fresh product data (for wholesale prices)
+            onUpdateCartProducts(data);
         } finally {
             setIsLoading(false);
         }
-    }, [customer?.id]);
+    }, [customer?.id, onUpdateCartProducts]);
 
     // Load products on mount
     useEffect(() => {
