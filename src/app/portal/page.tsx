@@ -72,14 +72,18 @@ export default function PortalPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [orderResult, setOrderResult] = useState<OrderResultType | null>(null);
 
-    // Load promotions when step 2 is reached
+    // Load promotions when step 2 is reached - RETAIL ONLY
     useEffect(() => {
         if (step === 2) {
-            getActivePromotions().then((promos) => {
-                setPromotions(promos as Promotion[]);
-            });
+            if (customerType === "retail") {
+                getActivePromotions().then((promos) => {
+                    setPromotions(promos as Promotion[]);
+                });
+            } else {
+                setPromotions([]);
+            }
         }
-    }, [step]);
+    }, [step, customerType]);
 
     // Load bank info and districts when step 3 is reached
     useEffect(() => {

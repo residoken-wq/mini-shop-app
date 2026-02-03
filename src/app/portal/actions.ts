@@ -160,7 +160,7 @@ export async function getPortalProducts(customerId?: string) {
         });
     }
 
-    return products.map(p => {
+    const mappedProducts = products.map(p => {
         const wholesaleInfo = wholesalePrices.get(p.id);
 
         return {
@@ -175,6 +175,13 @@ export async function getPortalProducts(customerId?: string) {
             hasWholesalePrice: !!wholesaleInfo
         };
     });
+
+    // If wholesale customer, filter to show ONLY valid wholesale products
+    if (customerId) {
+        return mappedProducts.filter(p => p.hasWholesalePrice && !p.isExpired);
+    }
+
+    return mappedProducts;
 }
 
 // Submit portal order
