@@ -76,9 +76,11 @@ export function ProductSelection({
         }
     }, [customerType, customer]);
 
-    // Filter products: only show products with stock > 0
+    // Filter products: 
+    // - Retail customers: only show products with stock > 0
+    // - Wholesale customers: show all products in their price list (can pre-order)
     const filteredProducts = products
-        .filter((p) => p.stock > 0) // Only show products with positive stock
+        .filter((p) => customerType === "wholesale" || p.stock > 0)
         .filter((p) =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.sku.toLowerCase().includes(searchTerm.toLowerCase())
