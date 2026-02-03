@@ -215,7 +215,7 @@ export default function OrderTracking() {
 
                                 {/* Status Progress */}
                                 <div className="mt-4">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-start justify-between">
                                         {(["PENDING", "PROCESSING", "READY", "SHIPPING", "COMPLETED"] as const).map((status, idx) => {
                                             const statusInfo = ORDER_STATUSES[status];
                                             const currentStep = order.statusInfo.step || 0;
@@ -225,17 +225,27 @@ export default function OrderTracking() {
 
                                             return (
                                                 <div key={status} className="flex items-center">
-                                                    <div className={cn(
-                                                        "w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold transition-all",
-                                                        isCancelled ? "bg-gray-200 text-gray-400" :
-                                                            isCurrent ? "bg-purple-500 text-white ring-2 ring-purple-200" :
-                                                                isCompleted ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
-                                                    )}>
-                                                        {isCompleted && !isCancelled ? <CheckCircle className="w-3 h-3 md:w-4 md:h-4" /> : idx + 1}
+                                                    <div className="flex flex-col items-center">
+                                                        <div className={cn(
+                                                            "w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold transition-all",
+                                                            isCancelled ? "bg-gray-200 text-gray-400" :
+                                                                isCurrent ? "bg-purple-500 text-white ring-2 ring-purple-200" :
+                                                                    isCompleted ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
+                                                        )}>
+                                                            {isCompleted && !isCancelled ? <CheckCircle className="w-3 h-3 md:w-4 md:h-4" /> : idx + 1}
+                                                        </div>
+                                                        <span className={cn(
+                                                            "text-[8px] md:text-[10px] mt-1 text-center max-w-[45px] md:max-w-[60px] leading-tight",
+                                                            isCancelled ? "text-gray-400" :
+                                                                isCurrent ? "text-purple-600 font-semibold" :
+                                                                    isCompleted ? "text-green-600" : "text-gray-400"
+                                                        )}>
+                                                            {statusInfo.label}
+                                                        </span>
                                                     </div>
                                                     {idx < 4 && (
                                                         <div className={cn(
-                                                            "w-4 md:w-8 h-0.5 mx-0.5",
+                                                            "w-4 md:w-8 h-0.5 mx-0.5 mb-4",
                                                             !isCancelled && isCompleted ? "bg-green-500" : "bg-gray-200"
                                                         )} />
                                                     )}
