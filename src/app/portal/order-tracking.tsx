@@ -276,12 +276,16 @@ export default function OrderTracking() {
                             {expandedOrder === order.id && (
                                 <div className="border-t bg-gray-50 p-4 space-y-4">
                                     {/* Delivery Info */}
-                                    {order.recipientName && (
+                                    {(order.recipientName || order.deliveryAddress || order.carrierName || order.deliveryNote) && (
                                         <div className="space-y-2">
                                             <p className="text-sm font-medium text-gray-600">Thông tin giao hàng</p>
                                             <div className="bg-white rounded-lg p-3 text-sm space-y-1">
-                                                <p><span className="text-gray-500">Người nhận:</span> {order.recipientName}</p>
-                                                <p><span className="text-gray-500">SĐT:</span> {order.recipientPhone}</p>
+                                                {order.recipientName && (
+                                                    <p><span className="text-gray-500">Người nhận:</span> {order.recipientName}</p>
+                                                )}
+                                                {order.recipientPhone && (
+                                                    <p><span className="text-gray-500">SĐT:</span> {order.recipientPhone}</p>
+                                                )}
                                                 {order.deliveryAddress && (
                                                     <p className="flex items-start gap-1">
                                                         <MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
