@@ -161,6 +161,13 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                         </>
                     )}
 
+                    {/* Delivery Note */}
+                    {order.deliveryNote && (
+                        <div className="mb-2 p-2 bg-blue-50 rounded border border-blue-200 text-sm">
+                            <span className="text-gray-600">📝 Ghi chú giao hàng:</span> {order.deliveryNote}
+                        </div>
+                    )}
+
                     {/* Grand Total */}
                     <div className="flex justify-between items-center text-lg font-bold text-gray-800 border-t border-gray-200 pt-2 mt-2">
                         <span>TỔNG CỘNG:</span>

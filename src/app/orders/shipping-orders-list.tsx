@@ -26,6 +26,7 @@ type ShippingOrder = {
     shippingFee: number;
     shippingPaidBy: string;
     shippedAt: Date | null;
+    deliveryNote: string | null;
     lastNotificationAt: Date | null;
     lastNotificationType: string | null;
     customer: { name: string; phone?: string } | null;
@@ -215,6 +216,14 @@ export function ShippingOrdersList({ onOrderUpdated }: ShippingOrdersListProps) 
                                         <div className="p-3 border-b flex items-start gap-2">
                                             <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                             <p className="text-sm text-gray-700">{order.deliveryAddress}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Delivery Note */}
+                                    {order.deliveryNote && (
+                                        <div className="p-3 border-b">
+                                            <p className="text-xs font-medium text-muted-foreground mb-1">📝 Ghi chú giao hàng</p>
+                                            <p className="text-sm bg-yellow-50 text-yellow-800 p-2 rounded border border-yellow-200">{order.deliveryNote}</p>
                                         </div>
                                     )}
 
