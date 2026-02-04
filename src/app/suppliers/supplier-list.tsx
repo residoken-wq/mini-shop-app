@@ -11,8 +11,8 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Plus, Search, MapPin, Phone, Truck, Loader2 } from "lucide-react";
-import { createSupplier, updateSupplier, deleteSupplier, paySupplierDebt } from "./actions";
+import { Edit, Trash2, Plus, Search, MapPin, Phone, Truck, Loader2, RefreshCw } from "lucide-react";
+import { createSupplier, updateSupplier, deleteSupplier, paySupplierDebt, recalculateSupplierDebt } from "./actions";
 import { cn } from "@/lib/utils";
 
 interface SupplierListProps {
@@ -128,6 +128,23 @@ export default function SupplierList({ initialSuppliers }: SupplierListProps) {
         }
     };
 
+    const handleRecalculateDebt = async (supplierId: string) => {
+        if (!confirm("Cập nhật lại công nợ từ các đơn mua hàng?")) return;
+        setLoading(true);
+        const res = await recalculateSupplierDebt(supplierId);
+        setLoading(false);
+        if (res.success) {
+            setSuppliers(prev => prev.map(s =>
+                s.id === supplierId
+                    ? { ...s, debt: res.debt! }
+                    : s
+            ));
+            alert("Đã cập nhật công nợ: " + new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(res.debt!));
+        } else {
+            alert("Lỗi: " + res.error);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -188,6 +205,9 @@ export default function SupplierList({ initialSuppliers }: SupplierListProps) {
                                     </span>
                                 </TableCell>
                                 <TableCell className="text-right space-x-2">
+                                    <Button variant="ghost" size="icon" title="Cập nhật công nợ" onClick={() => handleRecalculateDebt(s.id)}>
+                                        <RefreshCw className="h-4 w-4" />
+                                    </Button>
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(s)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>

@@ -152,7 +152,8 @@ export async function deleteOrder(id: string) {
             where: { id },
             include: {
                 items: true,
-                customer: true
+                customer: true,
+                supplier: true
             }
         });
 
@@ -185,6 +186,37 @@ export async function deleteOrder(id: string) {
             });
         }
 
+        // If PURCHASE order, reverse supplier debt and stock changes
+        if (order.type === "PURCHASE") {
+            // Decrease supplier debt (since purchase order increases debt)
+            if (order.supplierId) {
+                await db.supplier.update({
+                    where: { id: order.supplierId },
+                    data: { debt: { decrement: order.total } }
+                });
+            }
+
+            // Reverse stock changes (purchase orders increase stock, so we decrement)
+            for (const item of order.items) {
+                await db.product.update({
+                    where: { id: item.productId },
+                    data: { stock: { decrement: item.quantity } }
+                });
+            }
+
+            // Delete inventory transactions related to this order
+            await db.inventoryTransaction.deleteMany({
+                where: { note: { contains: order.id } }
+            });
+
+            // Delete related transaction records
+            await db.transaction.deleteMany({
+                where: {
+                    description: { contains: order.code }
+                }
+            });
+        }
+
         // Delete order items first (due to relation)
         await db.orderItem.deleteMany({
             where: { orderId: id }
@@ -197,6 +229,8 @@ export async function deleteOrder(id: string) {
         revalidatePath("/orders");
         revalidatePath("/customers");
         revalidatePath("/products");
+        revalidatePath("/suppliers");
+        revalidatePath("/finance");
         return { success: true };
     } catch (error) {
         console.error("Failed to delete order:", error);

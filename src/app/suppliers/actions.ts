@@ -217,6 +217,60 @@ export async function paySupplierDebt(data: {
     }
 }
 
+// Recalculate supplier debt from actual orders
+export async function recalculateSupplierDebt(supplierId: string) {
+    try {
+        // Get all purchase orders for this supplier
+        const purchaseOrders = await db.order.findMany({
+            where: {
+                supplierId: supplierId,
+                type: "PURCHASE"
+            },
+            select: {
+                total: true,
+                paid: true
+            }
+        });
+
+        // Get all debt payments made to this supplier
+        const debtPayments = await db.transaction.findMany({
+            where: {
+                supplierId: supplierId,
+                type: "DEBT_PAYMENT"
+            },
+            select: {
+                amount: true
+            }
+        });
+
+        // Calculate total debt from purchase orders (total - paid for each order)
+        const totalFromOrders = purchaseOrders.reduce((sum, order) => {
+            return sum + (order.total - (order.paid || 0));
+        }, 0);
+
+        // Calculate total debt payments
+        const totalPayments = debtPayments.reduce((sum, payment) => {
+            return sum + payment.amount;
+        }, 0);
+
+        // Net debt = total from orders - payments made
+        const calculatedDebt = totalFromOrders - totalPayments;
+
+        // Update supplier debt
+        const supplier = await db.supplier.update({
+            where: { id: supplierId },
+            data: { debt: calculatedDebt > 0 ? calculatedDebt : 0 }
+        });
+
+        revalidatePath("/suppliers");
+        revalidatePath("/finance");
+        return { success: true, debt: supplier.debt };
+    } catch (error) {
+        console.error("Failed to recalculate supplier debt:", error);
+        return { success: false, error: "Failed to recalculate supplier debt" };
+    }
+}
+
 // ============ CARRIER MANAGEMENT ============
 
 export async function getCarriers() {
