@@ -352,7 +352,7 @@ export default function OrderTracking() {
                                             {/* Payment Status */}
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-500">Trạng thái:</span>
-                                                {order.paid >= order.total || order.status === "COMPLETED" ? (
+                                                {order.paid >= order.total ? (
                                                     <Badge className="bg-green-100 text-green-700 text-xs text-nowrap">
                                                         <CheckCircle className="w-3 h-3 mr-1" />
                                                         Đã thanh toán
