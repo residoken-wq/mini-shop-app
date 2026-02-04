@@ -77,13 +77,25 @@ model WholesalePrice {
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   productId  String
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  price      Float
+  price      Float    // Base price (for minQuantity = 1)
   validFrom  DateTime @default(now())
   validTo    DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   
+  tiers      WholesalePriceTier[]
+  
   @@unique([customerId, productId]) // One price per product per customer
+}
+
+// Tiered pricing for wholesale - different prices based on order quantity
+model WholesalePriceTier {
+  id               String         @id @default(uuid())
+  wholesalePriceId String
+  wholesalePrice   WholesalePrice @relation(fields: [wholesalePriceId], references: [id], onDelete: Cascade)
+  minQuantity      Float          // Minimum quantity for this price tier
+  price            Float          // Price for this tier
+  createdAt        DateTime       @default(now())
 }
 
 model Supplier {

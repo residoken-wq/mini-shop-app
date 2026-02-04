@@ -17,6 +17,9 @@ export async function getWholesalePrices(customerId: string) {
                     price: true,
                     unit: true
                 }
+            },
+            tiers: {
+                orderBy: { minQuantity: 'asc' }
             }
         },
         orderBy: { product: { name: "asc" } }
@@ -207,19 +210,20 @@ export async function applyProfitMarginAll(
 export async function copyPricingTable(fromCustomerId: string, toCustomerId: string) {
     try {
         const sourcePrices = await db.wholesalePrice.findMany({
-            where: { customerId: fromCustomerId }
+            where: { customerId: fromCustomerId },
+            include: { tiers: true }
         });
 
         if (sourcePrices.length === 0) {
             return { success: false, error: "Khách hàng nguồn không có bảng giá" };
         }
 
-        // Delete existing prices for target customer
+        // Delete existing prices for target customer (tiers will be cascade deleted)
         await db.wholesalePrice.deleteMany({
             where: { customerId: toCustomerId }
         });
 
-        // Create new prices for target customer
+        // Create new prices for target customer with tiers
         for (const price of sourcePrices) {
             await db.wholesalePrice.create({
                 data: {
@@ -227,7 +231,13 @@ export async function copyPricingTable(fromCustomerId: string, toCustomerId: str
                     productId: price.productId,
                     price: price.price,
                     validFrom: price.validFrom,
-                    validTo: price.validTo
+                    validTo: price.validTo,
+                    tiers: {
+                        create: price.tiers.map(tier => ({
+                            minQuantity: tier.minQuantity,
+                            price: tier.price
+                        }))
+                    }
                 }
             });
         }
@@ -254,4 +264,72 @@ export async function getCustomer(id: string) {
         where: { id },
         select: { id: true, name: true, phone: true, customerType: true }
     });
+}
+
+// === Price Tier CRUD ===
+
+// Add a price tier to a wholesale price
+export async function addPriceTier(data: {
+    wholesalePriceId: string;
+    minQuantity: number;
+    price: number;
+}) {
+    try {
+        // Get the wholesale price to find customerId for revalidation
+        const wp = await db.wholesalePrice.findUnique({
+            where: { id: data.wholesalePriceId },
+            select: { customerId: true }
+        });
+
+        if (!wp) {
+            return { success: false, error: "Không tìm thấy bảng giá" };
+        }
+
+        const tier = await db.wholesalePriceTier.create({
+            data: {
+                wholesalePriceId: data.wholesalePriceId,
+                minQuantity: data.minQuantity,
+                price: data.price
+            }
+        });
+
+        revalidatePath(`/customers/${wp.customerId}/pricing`);
+        return { success: true, tier };
+    } catch (e) {
+        return { success: false, error: "Không thể thêm mức giá" };
+    }
+}
+
+// Update a price tier
+export async function updatePriceTier(
+    id: string,
+    data: { minQuantity?: number; price?: number }
+) {
+    try {
+        const tier = await db.wholesalePriceTier.update({
+            where: { id },
+            data,
+            include: { wholesalePrice: { select: { customerId: true } } }
+        });
+
+        revalidatePath(`/customers/${tier.wholesalePrice.customerId}/pricing`);
+        return { success: true, tier };
+    } catch (e) {
+        return { success: false, error: "Không thể cập nhật mức giá" };
+    }
+}
+
+// Delete a price tier
+export async function deletePriceTier(id: string) {
+    try {
+        const tier = await db.wholesalePriceTier.delete({
+            where: { id },
+            include: { wholesalePrice: { select: { customerId: true } } }
+        });
+
+        revalidatePath(`/customers/${tier.wholesalePrice.customerId}/pricing`);
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Không thể xóa mức giá" };
+    }
 }

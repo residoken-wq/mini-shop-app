@@ -36,7 +36,10 @@ import {
     ArrowLeft,
     CheckCircle,
     XCircle,
-    Calculator
+    Calculator,
+    ChevronDown,
+    ChevronRight,
+    Layers
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -45,7 +48,10 @@ import {
     deleteWholesalePrice,
     applyProfitMargin,
     applyProfitMarginAll,
-    copyPricingTable
+    copyPricingTable,
+    addPriceTier,
+    updatePriceTier,
+    deletePriceTier
 } from "./actions";
 
 interface Product {
@@ -58,6 +64,13 @@ interface Product {
     hasWholesalePrice?: boolean;
 }
 
+interface PriceTier {
+    id: string;
+    wholesalePriceId: string;
+    minQuantity: number;
+    price: number;
+}
+
 interface WholesalePrice {
     id: string;
     customerId: string;
@@ -68,6 +81,7 @@ interface WholesalePrice {
     isExpired: boolean;
     isActive: boolean;
     product: Product;
+    tiers: PriceTier[];
 }
 
 interface WholesaleCustomer {
@@ -97,6 +111,14 @@ export function PricingClient({
     const [isCopyOpen, setIsCopyOpen] = useState(false);
     const [editingPrice, setEditingPrice] = useState<WholesalePrice | null>(null);
 
+    // Tier management states
+    const [isTierOpen, setIsTierOpen] = useState(false);
+    const [editingTier, setEditingTier] = useState<PriceTier | null>(null);
+    const [tierWholesalePriceId, setTierWholesalePriceId] = useState<string>("");
+    const [tierMinQty, setTierMinQty] = useState("");
+    const [tierPrice, setTierPrice] = useState("");
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
     // Form states
     const [selectedProductId, setSelectedProductId] = useState("");
     const [price, setPrice] = useState("");
@@ -123,6 +145,19 @@ export function PricingClient({
     // Calculate price from margin
     const calculatePriceFromMargin = (cost: number, margin: number) => {
         return Math.round(cost * (1 + margin / 100));
+    };
+
+    // Toggle row expansion
+    const toggleRow = (id: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
     };
 
     const handleAdd = async () => {
@@ -209,6 +244,56 @@ export function PricingClient({
         setIsEditOpen(true);
     };
 
+    // Tier handlers
+    const openAddTier = (wholesalePriceId: string) => {
+        setTierWholesalePriceId(wholesalePriceId);
+        setEditingTier(null);
+        setTierMinQty("");
+        setTierPrice("");
+        setIsTierOpen(true);
+    };
+
+    const openEditTier = (tier: PriceTier) => {
+        setTierWholesalePriceId(tier.wholesalePriceId);
+        setEditingTier(tier);
+        setTierMinQty(tier.minQuantity.toString());
+        setTierPrice(tier.price.toString());
+        setIsTierOpen(true);
+    };
+
+    const handleSaveTier = async () => {
+        if (!tierMinQty || !tierPrice) return;
+        setIsLoading(true);
+        try {
+            if (editingTier) {
+                await updatePriceTier(editingTier.id, {
+                    minQuantity: parseFloat(tierMinQty),
+                    price: parseFloat(tierPrice)
+                });
+            } else {
+                await addPriceTier({
+                    wholesalePriceId: tierWholesalePriceId,
+                    minQuantity: parseFloat(tierMinQty),
+                    price: parseFloat(tierPrice)
+                });
+            }
+            setIsTierOpen(false);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDeleteTier = async (tierId: string) => {
+        if (!confirm("Xác nhận xóa mức giá này?")) return;
+        await deletePriceTier(tierId);
+    };
+
+    // Format tiers display
+    const formatTiers = (tiers: PriceTier[]) => {
+        if (!tiers || tiers.length === 0) return null;
+        return tiers.map(t => `${t.minQuantity}+ → ${formatCurrency(t.price)}đ`).join(" | ");
+    };
+
     return (
         <div className="space-y-6">
             {/* Header Actions */}
@@ -255,13 +340,16 @@ export function PricingClient({
                                 </div>
                             )}
                             <div>
-                                <Label>Đơn giá bán sỉ</Label>
+                                <Label>Đơn giá bán sỉ (cơ bản)</Label>
                                 <Input
                                     type="number"
                                     value={price}
                                     onChange={(e) => setPrice(e.target.value)}
                                     placeholder="Nhập đơn giá"
                                 />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Có thể thêm mức giá theo số lượng sau khi tạo
+                                </p>
                             </div>
                             <div>
                                 <Label>Hoặc tính từ % lợi nhuận</Label>
@@ -393,10 +481,12 @@ export function PricingClient({
                 <Table>
                     <TableHeader>
                         <TableRow>
+                            <TableHead className="w-8"></TableHead>
                             <TableHead>Sản phẩm</TableHead>
                             <TableHead className="text-right">Giá nhập</TableHead>
                             <TableHead className="text-right">Giá sỉ</TableHead>
                             <TableHead className="text-right">% Lợi nhuận</TableHead>
+                            <TableHead>Mức giá theo SL</TableHead>
                             <TableHead>Hiệu lực</TableHead>
                             <TableHead>Trạng thái</TableHead>
                             <TableHead className="text-right">Thao tác</TableHead>
@@ -405,7 +495,7 @@ export function PricingClient({
                     <TableBody>
                         {wholesalePrices.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                                     Chưa có giá nào. Bấm &quot;Thêm giá&quot; hoặc &quot;Apply All&quot; để bắt đầu.
                                 </TableCell>
                             </TableRow>
@@ -414,71 +504,147 @@ export function PricingClient({
                                 const margin = wp.product.cost > 0
                                     ? ((wp.price - wp.product.cost) / wp.product.cost * 100).toFixed(1)
                                     : "N/A";
+                                const isExpanded = expandedRows.has(wp.id);
+                                const hasTiers = wp.tiers && wp.tiers.length > 0;
+
                                 return (
-                                    <TableRow key={wp.id}>
-                                        <TableCell>
-                                            <div>
-                                                <div className="font-medium">{wp.product.name}</div>
-                                                <div className="text-sm text-muted-foreground">{wp.product.sku}</div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {formatCurrency(wp.product.cost)}đ
-                                        </TableCell>
-                                        <TableCell className="text-right font-semibold">
-                                            {formatCurrency(wp.price)}đ
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Badge variant="outline">{margin}%</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="text-sm">
-                                                {formatDate(wp.validFrom)} - {formatDate(wp.validTo)}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {wp.isActive ? (
-                                                <Badge className="bg-green-100 text-green-800">
-                                                    <CheckCircle className="mr-1 h-3 w-3" />
-                                                    Active
-                                                </Badge>
-                                            ) : wp.isExpired ? (
-                                                <Badge variant="destructive">
-                                                    <XCircle className="mr-1 h-3 w-3" />
-                                                    Hết hạn
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary">Chưa hiệu lực</Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleApplyMargin(wp.productId, wp.product.cost)}
-                                                    title={`Áp dụng ${marginPercent}% lợi nhuận`}
-                                                >
-                                                    <Percent className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => openEdit(wp)}
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDelete(wp.id)}
-                                                    className="text-red-500 hover:text-red-600"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                                    <>
+                                        <TableRow key={wp.id}>
+                                            <TableCell>
+                                                {hasTiers && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={() => toggleRow(wp.id)}
+                                                    >
+                                                        {isExpanded ? (
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        ) : (
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div>
+                                                    <div className="font-medium">{wp.product.name}</div>
+                                                    <div className="text-sm text-muted-foreground">{wp.product.sku}</div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {formatCurrency(wp.product.cost)}đ
+                                            </TableCell>
+                                            <TableCell className="text-right font-semibold">
+                                                {formatCurrency(wp.price)}đ
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Badge variant="outline">{margin}%</Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {hasTiers ? (
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {formatTiers(wp.tiers)}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">-</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm">
+                                                    {formatDate(wp.validFrom)} - {formatDate(wp.validTo)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {wp.isActive ? (
+                                                    <Badge className="bg-green-100 text-green-800">
+                                                        <CheckCircle className="mr-1 h-3 w-3" />
+                                                        Active
+                                                    </Badge>
+                                                ) : wp.isExpired ? (
+                                                    <Badge variant="destructive">
+                                                        <XCircle className="mr-1 h-3 w-3" />
+                                                        Hết hạn
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="secondary">Chưa hiệu lực</Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => openAddTier(wp.id)}
+                                                        title="Thêm mức giá theo số lượng"
+                                                    >
+                                                        <Layers className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleApplyMargin(wp.productId, wp.product.cost)}
+                                                        title={`Áp dụng ${marginPercent}% lợi nhuận`}
+                                                    >
+                                                        <Percent className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => openEdit(wp)}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(wp.id)}
+                                                        className="text-red-500 hover:text-red-600"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                        {/* Expanded tier rows */}
+                                        {isExpanded && hasTiers && wp.tiers.map((tier) => (
+                                            <TableRow key={tier.id} className="bg-muted/50">
+                                                <TableCell></TableCell>
+                                                <TableCell colSpan={3} className="pl-8">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className="font-mono">
+                                                            ≥ {tier.minQuantity} {wp.product.unit}
+                                                        </Badge>
+                                                        <span className="text-muted-foreground">→</span>
+                                                        <span className="font-semibold text-primary">
+                                                            {formatCurrency(tier.price)}đ
+                                                        </span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell colSpan={4}></TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7"
+                                                            onClick={() => openEditTier(tier)}
+                                                        >
+                                                            <Edit className="h-3 w-3" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-red-500 hover:text-red-600"
+                                                            onClick={() => handleDeleteTier(tier.id)}
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </>
                                 );
                             })
                         )}
@@ -486,7 +652,7 @@ export function PricingClient({
                 </Table>
             </div>
 
-            {/* Edit Dialog */}
+            {/* Edit Price Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -501,7 +667,7 @@ export function PricingClient({
                                 </p>
                             </div>
                             <div>
-                                <Label>Đơn giá bán sỉ</Label>
+                                <Label>Đơn giá bán sỉ (cơ bản)</Label>
                                 <Input
                                     type="number"
                                     value={price}
@@ -546,6 +712,46 @@ export function PricingClient({
                             </Button>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Tier Dialog */}
+            <Dialog open={isTierOpen} onOpenChange={setIsTierOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {editingTier ? "Sửa mức giá" : "Thêm mức giá theo số lượng"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            Thiết lập giá đặc biệt khi khách đặt số lượng lớn
+                        </p>
+                        <div>
+                            <Label>Số lượng tối thiểu</Label>
+                            <Input
+                                type="number"
+                                value={tierMinQty}
+                                onChange={(e) => setTierMinQty(e.target.value)}
+                                placeholder="VD: 10"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Áp dụng khi khách đặt từ số lượng này trở lên
+                            </p>
+                        </div>
+                        <div>
+                            <Label>Đơn giá</Label>
+                            <Input
+                                type="number"
+                                value={tierPrice}
+                                onChange={(e) => setTierPrice(e.target.value)}
+                                placeholder="VD: 18000"
+                            />
+                        </div>
+                        <Button onClick={handleSaveTier} disabled={isLoading} className="w-full">
+                            {isLoading ? "Đang xử lý..." : (editingTier ? "Lưu" : "Thêm")}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

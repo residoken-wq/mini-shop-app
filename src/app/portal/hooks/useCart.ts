@@ -121,14 +121,35 @@ export function useCart({ promotions }: UseCartProps): UseCartReturn {
         }, 0);
     }, [cart]);
 
+    // Get wholesale tier price
+    const getWholesaleTierPrice = useCallback((product: Product, quantity: number): number | null => {
+        if (!product.priceTiers || product.priceTiers.length === 0) return null;
+
+        const applicableTiers = product.priceTiers.filter((t) => quantity >= t.minQuantity);
+        if (applicableTiers.length === 0) return null;
+
+        // Get tier with highest minQuantity
+        const bestTier = applicableTiers.reduce((best, tier) =>
+            tier.minQuantity > best.minQuantity ? tier : best
+        );
+        return bestTier.price;
+    }, []);
+
     // Get the effective price for a cart item (per item unit, accounting for sale ratio)
     const getCartItemPrice = useCallback((product: Product, quantity: number): number => {
         const ratio = product.saleUnit ? (product.saleRatio || 1) : 1;
         const baseQty = quantity * ratio;
+
         const promoPrice = getPromotionPrice(product.id, baseQty);
-        const basePrice = promoPrice !== null ? promoPrice : product.displayPrice;
+        const tierPrice = getWholesaleTierPrice(product, baseQty);
+
+        // Priority: Promotion > Wholesale Tier > Base Wholesale/Retail Price
+        const basePrice = promoPrice !== null
+            ? promoPrice
+            : (tierPrice !== null ? tierPrice : product.displayPrice);
+
         return basePrice * ratio;
-    }, [getPromotionPrice]);
+    }, [getPromotionPrice, getWholesaleTierPrice]);
 
     // Calculate cart total with promotion prices
     const getProductTotalWithPromo = useCallback(() => {

@@ -40,8 +40,17 @@ export function ProductCard({
     const displayUnit = hasSaleUnit ? product.saleUnit : product.unit;
     const ratio = hasSaleUnit ? (product.saleRatio || 1) : 1;
 
-    // Price per Display Unit (Estimated if ratio != 1)
-    const displayPrice = basePrice * ratio;
+    // Tiered Price Logic
+    // Find applicable tier based on CURRENT quantity
+    const baseQty = quantity * ratio;
+    const activeTier = !promotionPrice && product.priceTiers
+        ? product.priceTiers.filter(t => baseQty >= t.minQuantity).sort((a, b) => b.minQuantity - a.minQuantity)[0]
+        : null;
+
+    const effectiveBasePrice = activeTier ? activeTier.price : basePrice;
+
+    // Price per Display Unit
+    const displayPrice = effectiveBasePrice * ratio;
 
     // Total Estimation
     const totalEstimate = displayPrice * quantity;
@@ -70,9 +79,21 @@ export function ProductCard({
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">{product.sku}</p>
                     {customerType === "wholesale" && product.hasWholesalePrice && (
-                        <Badge className="mt-1 bg-purple-100 text-purple-700 text-xs">
-                            Giá sỉ
-                        </Badge>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                            <Badge className="bg-purple-100 text-purple-700 text-xs hover:bg-purple-100">
+                                Giá sỉ
+                            </Badge>
+                            {/* Display Tiers if available */}
+                            {product.priceTiers && product.priceTiers.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                    {product.priceTiers.map(t => (
+                                        <span key={t.minQuantity} className={`text-[10px] px-1 py-0.5 rounded border ${baseQty >= t.minQuantity ? 'bg-green-100 border-green-200 text-green-700 font-bold' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                            ≥{t.minQuantity}: {formatCurrency(t.price)}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     )}
                     {product.isExpired && (
                         <Badge className="mt-1 bg-red-100 text-red-700 text-xs ml-1">
@@ -87,7 +108,7 @@ export function ProductCard({
                 {/* Price Display */}
                 <div>
                     <div className="flex items-center gap-1">
-                        <span className={cn("font-bold text-lg", promotionPrice !== null ? "text-green-600" : "text-purple-600")}>
+                        <span className={cn("font-bold text-lg", promotionPrice !== null ? "text-green-600" : (activeTier ? "text-blue-600" : "text-purple-600"))}>
                             {formatCurrency(displayPrice)}đ
                         </span>
                         <span className="text-xs text-gray-500">/{displayUnit}</span>
@@ -96,7 +117,7 @@ export function ProductCard({
                     {/* Secondary/Base Price Info if using Sale Unit */}
                     {hasSaleUnit && (
                         <div className="text-[10px] text-gray-400">
-                            (≈ {ratio} {product.unit}) • {formatCurrency(basePrice)}đ/{product.unit}
+                            (≈ {ratio} {product.unit}) • {formatCurrency(effectiveBasePrice)}đ/{product.unit}
                         </div>
                     )}
 
@@ -158,7 +179,10 @@ export function ProductCard({
             {/* Total if in cart */}
             {inCart && (
                 <div className="mt-2 pt-2 border-t flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Tạm tính{hasSaleUnit ? "*" : ""}:</span>
+                    <span className="text-sm text-gray-500">
+                        Tạm tính{hasSaleUnit ? "*" : ""}
+                        {activeTier && <span className="text-xs ml-1 text-blue-600">(Đã áp dụng giá sỉ)</span>}
+                    </span>
                     <span className="font-bold text-purple-600">
                         {formatCurrency(totalEstimate)}đ
                     </span>

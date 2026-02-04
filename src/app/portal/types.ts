@@ -22,6 +22,7 @@ export interface Product {
     hasWholesalePrice: boolean;
     saleUnit?: string | null;
     saleRatio?: number | null;
+    priceTiers?: { minQuantity: number; price: number }[];
 }
 
 // Cart item type

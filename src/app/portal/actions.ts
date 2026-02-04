@@ -143,19 +143,32 @@ export async function getPortalProducts(customerId?: string) {
 
     const now = new Date();
 
-    // If wholesale customer, get their prices
-    let wholesalePrices: Map<string, { price: number; isExpired: boolean }> = new Map();
+    // If wholesale customer, get their prices with tiers
+    let wholesalePrices: Map<string, {
+        price: number;
+        isExpired: boolean;
+        tiers: { minQuantity: number; price: number }[];
+    }> = new Map();
 
     if (customerId) {
         const prices = await db.wholesalePrice.findMany({
-            where: { customerId }
+            where: { customerId },
+            include: {
+                tiers: {
+                    orderBy: { minQuantity: 'asc' }
+                }
+            }
         });
 
         prices.forEach(p => {
             const isExpired = p.validTo < now;
             wholesalePrices.set(p.productId, {
                 price: p.price,
-                isExpired
+                isExpired,
+                tiers: p.tiers.map(t => ({
+                    minQuantity: t.minQuantity,
+                    price: t.price
+                }))
             });
         });
     }
@@ -172,7 +185,9 @@ export async function getPortalProducts(customerId?: string) {
                 ? (wholesaleInfo.isExpired ? 0 : wholesaleInfo.price)
                 : p.price,
             isExpired: wholesaleInfo?.isExpired || false,
-            hasWholesalePrice: !!wholesaleInfo
+            hasWholesalePrice: !!wholesaleInfo,
+            // Include tiers for quantity-based pricing calculation
+            priceTiers: wholesaleInfo?.tiers || []
         };
     });
 
