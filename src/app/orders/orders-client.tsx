@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Order, Customer, Supplier, OrderItem, Product } from "@prisma/client";
+import { Order, Customer, Supplier, OrderItem, Product, ShopSettings } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +30,10 @@ type OrderWithRelations = Order & {
 interface OrdersClientProps {
     initialOrders: OrderWithRelations[];
     expensesTotal: number;
+    shopSettings?: ShopSettings | null;
 }
 
-export function OrdersClient({ initialOrders, expensesTotal }: OrdersClientProps) {
+export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: OrdersClientProps) {
     const [orders, setOrders] = useState(initialOrders);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<"SALE" | "PURCHASE">("SALE");
@@ -603,7 +604,7 @@ export function OrdersClient({ initialOrders, expensesTotal }: OrdersClientProps
                                 {/* Content based on view mode */}
                                 {viewMode === "receipt" ? (
                                     <div className="border rounded-lg overflow-hidden shadow-sm">
-                                        <OrderReceipt ref={receiptRef} order={selectedOrder} />
+                                        <OrderReceipt ref={receiptRef} order={selectedOrder} shopSettings={shopSettings} />
                                     </div>
                                 ) : (
                                     <OrderEditableItems

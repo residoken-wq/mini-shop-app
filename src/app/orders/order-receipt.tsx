@@ -1,7 +1,7 @@
 "use client";
 
-import { forwardRef } from "react";
-import { Order, Customer, OrderItem, Product } from "@prisma/client";
+import { forwardRef, useState } from "react";
+import { Order, Customer, OrderItem, Product, ShopSettings } from "@prisma/client";
 
 type OrderWithRelations = Order & {
     customer: Customer | null;
@@ -10,15 +10,118 @@ type OrderWithRelations = Order & {
 
 interface OrderReceiptProps {
     order: OrderWithRelations;
-    shopName?: string;
-    shopPhone?: string;
-    shopAddress?: string;
+    shopSettings?: ShopSettings | null;
+}
+
+// VietQR bank codes mapping
+const BANK_BINS: Record<string, string> = {
+    "Vietcombank": "970436",
+    "VCB": "970436",
+    "Techcombank": "970407",
+    "TCB": "970407",
+    "BIDV": "970418",
+    "Agribank": "970405",
+    "VPBank": "970432",
+    "MBBank": "970422",
+    "MB": "970422",
+    "ACB": "970416",
+    "Sacombank": "970403",
+    "VIB": "970441",
+    "TPBank": "970423",
+    "HDBank": "970437",
+    "OCB": "970448",
+    "SHB": "970443",
+    "SeABank": "970440",
+    "MSB": "970426",
+    "LienVietPostBank": "970449",
+    "VietinBank": "970415",
+    "CTG": "970415",
+    "Eximbank": "970431",
+    "NamABank": "970428",
+    "PVcomBank": "970412",
+    "BacABank": "970409",
+    "DongABank": "970406",
+    "BaoVietBank": "970438",
+    "ABBank": "970425",
+    "NCB": "970419",
+    "VietABank": "970427",
+    "Kienlongbank": "970452",
+    "GPBank": "970408",
+    "CIMB": "422589",
+    "UOB": "970458",
+    "HSBC": "458761",
+    "Standard Chartered": "970410",
+    "Shinhan": "970424",
+    "Woori": "970457",
+    "Public Bank": "970439",
+};
+
+function getBankBin(bankName: string): string | null {
+    // Direct match
+    if (BANK_BINS[bankName]) {
+        return BANK_BINS[bankName];
+    }
+    // Case-insensitive partial match
+    const lowerBankName = bankName.toLowerCase();
+    for (const [key, bin] of Object.entries(BANK_BINS)) {
+        if (lowerBankName.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerBankName)) {
+            return bin;
+        }
+    }
+    return null;
+}
+
+function generateVietQRUrl(
+    bankName: string,
+    accountNo: string,
+    accountName: string,
+    amount: number,
+    content: string
+): string | null {
+    const bankBin = getBankBin(bankName);
+    if (!bankBin || !accountNo) return null;
+
+    // VietQR URL format
+    const template = "compact2"; // or "compact", "qr_only", "print"
+    const encodedContent = encodeURIComponent(content);
+    const encodedAccountName = encodeURIComponent(accountName);
+
+    return `https://img.vietqr.io/image/${bankBin}-${accountNo}-${template}.png?amount=${amount}&addInfo=${encodedContent}&accountName=${encodedAccountName}`;
 }
 
 export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
-    ({ order, shopName = "MINI SHOP", shopPhone = "0123 456 789", shopAddress = "TP. Hồ Chí Minh" }, ref) => {
+    ({ order, shopSettings }, ref) => {
+        const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK">(
+            order.paymentMethod === "QR" ? "BANK" : "CASH"
+        );
+
         const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN').format(price);
         const formatCurrency = (price: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+
+        // Shop info from settings or defaults
+        const shopName = shopSettings?.name || "MINI SHOP";
+        const shopPhone = shopSettings?.phone || "";
+        const shopAddress = shopSettings?.address || "";
+
+        // Calculate amounts
+        const subtotal = order.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        const shippingForCustomer = order.shippingPaidBy === "CUSTOMER" && order.shippingFee ? order.shippingFee : 0;
+        const grandTotal = order.total + shippingForCustomer;
+        const amountDue = grandTotal - (order.paid || 0);
+
+        // Customer address (from order delivery address or customer profile)
+        const customerAddress = order.deliveryAddress || order.customer?.address;
+
+        // VietQR URL
+        const vietQRUrl = paymentMethod === "BANK" && shopSettings?.bankName && shopSettings?.bankAccount
+            ? generateVietQRUrl(
+                shopSettings.bankName,
+                shopSettings.bankAccount,
+                shopSettings.bankOwner || shopName,
+                amountDue > 0 ? amountDue : grandTotal,
+                order.code
+            )
+            : null;
 
         return (
             <div
@@ -29,8 +132,8 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 {/* Header */}
                 <div className="text-center border-b-2 border-dashed border-gray-300 pb-4 mb-4">
                     <h1 className="text-2xl font-bold text-gray-800">{shopName}</h1>
-                    <p className="text-sm text-gray-500">{shopAddress}</p>
-                    <p className="text-sm text-gray-500">ĐT: {shopPhone}</p>
+                    {shopAddress && <p className="text-sm text-gray-500">{shopAddress}</p>}
+                    {shopPhone && <p className="text-sm text-gray-500">ĐT: {shopPhone}</p>}
                 </div>
 
                 {/* Receipt Title */}
@@ -55,12 +158,23 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                         <span className="font-medium">
                             {order.recipientName || order.customer?.name || "Khách lẻ"}
                         </span>
+                        {order.customer?.customerType === "wholesale" && (
+                            <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Sỉ</span>
+                        )}
                     </p>
                     {(order.recipientPhone || order.customer?.phone) && (
                         <p className="text-sm text-gray-500">
                             ĐT: {order.recipientPhone || order.customer?.phone}
                         </p>
                     )}
+
+                    {/* Customer Address - NEW */}
+                    {customerAddress && (
+                        <p className="text-sm text-gray-500">
+                            📍 {customerAddress}
+                        </p>
+                    )}
+
                     {/* Delivery Method */}
                     <p className="text-sm">
                         <span className="text-gray-500">Nhận hàng:</span>{" "}
@@ -68,21 +182,34 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             {order.deliveryMethod === "PICKUP" ? "🏪 Lấy tại shop" : "🛵 Giao hàng"}
                         </span>
                     </p>
-                    {order.deliveryAddress && (
-                        <p className="text-sm text-gray-500">
-                            📍 {order.deliveryAddress}
-                        </p>
-                    )}
-                    {order.paymentMethod && (
-                        <p className="text-sm">
-                            <span className="text-gray-500">Thanh toán:</span>{" "}
-                            <span className="font-medium">
-                                {order.paymentMethod === "COD" ? "💵 Tiền mặt (COD)" :
-                                    order.paymentMethod === "QR" ? "📱 Chuyển khoản" :
-                                        order.paymentMethod === "CREDIT" ? "📋 Công nợ" : order.paymentMethod}
-                            </span>
-                        </p>
-                    )}
+
+                    {/* Payment Method Selection */}
+                    <div className="mt-2">
+                        <span className="text-sm text-gray-500">Thanh toán:</span>
+                        <div className="flex gap-2 mt-1">
+                            <button
+                                type="button"
+                                onClick={() => setPaymentMethod("CASH")}
+                                className={`px-3 py-1 text-xs rounded-full border transition-colors ${paymentMethod === "CASH"
+                                        ? "bg-green-500 text-white border-green-500"
+                                        : "bg-white text-gray-600 border-gray-300 hover:border-green-400"
+                                    }`}
+                            >
+                                💵 Tiền mặt
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPaymentMethod("BANK")}
+                                className={`px-3 py-1 text-xs rounded-full border transition-colors ${paymentMethod === "BANK"
+                                        ? "bg-blue-500 text-white border-blue-500"
+                                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                                    }`}
+                            >
+                                📱 Chuyển khoản
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Note */}
                     {order.note && (
                         <p className="text-sm mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
@@ -128,10 +255,10 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                     </div>
 
                     {/* Subtotal when has discount or shipping */}
-                    {((order.discount && order.discount > 0) || (order.shippingFee && order.shippingFee > 0 && order.shippingPaidBy === "CUSTOMER")) && (
+                    {((order.discount && order.discount > 0) || shippingForCustomer > 0) && (
                         <div className="flex justify-between items-center mb-1">
                             <span className="text-gray-600">Tiền hàng:</span>
-                            <span className="font-medium">{formatPrice(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0))}đ</span>
+                            <span className="font-medium">{formatPrice(subtotal)}đ</span>
                         </div>
                     )}
 
@@ -145,20 +272,18 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
 
                     {/* Shipping Info */}
                     {order.shippingFee && order.shippingFee > 0 && (
-                        <>
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-gray-600">
-                                    🚚 Phí vận chuyển {order.carrierName ? `(${order.carrierName})` : ''}:
-                                </span>
-                                <span className="font-medium">
-                                    {order.shippingPaidBy === "SHOP" ? (
-                                        <span className="text-green-600">Shop trả</span>
-                                    ) : (
-                                        <span>{formatPrice(order.shippingFee)}đ</span>
-                                    )}
-                                </span>
-                            </div>
-                        </>
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-gray-600">
+                                🚚 Phí vận chuyển {order.carrierName ? `(${order.carrierName})` : ''}:
+                            </span>
+                            <span className="font-medium">
+                                {order.shippingPaidBy === "SHOP" ? (
+                                    <span className="text-green-600">Shop trả</span>
+                                ) : (
+                                    <span>{formatPrice(order.shippingFee)}đ</span>
+                                )}
+                            </span>
+                        </div>
                     )}
 
                     {/* Delivery Note */}
@@ -171,13 +296,11 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                     {/* Grand Total */}
                     <div className="flex justify-between items-center text-lg font-bold text-gray-800 border-t border-gray-200 pt-2 mt-2">
                         <span>TỔNG CỘNG:</span>
-                        <span className="text-primary">{formatCurrency(
-                            order.total + (order.shippingPaidBy === "CUSTOMER" && order.shippingFee ? order.shippingFee : 0)
-                        )}</span>
+                        <span className="text-primary">{formatCurrency(grandTotal)}</span>
                     </div>
 
                     {/* Paid amount if partially paid */}
-                    {order.paid && order.paid > 0 && order.paid < order.total && (
+                    {order.paid && order.paid > 0 && order.paid < grandTotal && (
                         <>
                             <div className="flex justify-between items-center mt-1 text-green-600">
                                 <span>✓ Đã thanh toán:</span>
@@ -185,11 +308,45 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             </div>
                             <div className="flex justify-between items-center text-orange-600 font-bold">
                                 <span>⏳ Còn lại:</span>
-                                <span>{formatPrice(order.total + (order.shippingPaidBy === "CUSTOMER" && order.shippingFee ? order.shippingFee : 0) - order.paid)}đ</span>
+                                <span>{formatPrice(amountDue)}đ</span>
                             </div>
                         </>
                     )}
                 </div>
+
+                {/* VietQR Code - Only show for bank transfer */}
+                {paymentMethod === "BANK" && vietQRUrl && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                        <div className="text-center">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Quét mã để thanh toán</p>
+                            <img
+                                src={vietQRUrl}
+                                alt="VietQR Payment"
+                                className="mx-auto rounded-lg border border-gray-200"
+                                style={{ maxWidth: "200px" }}
+                            />
+                            <div className="mt-2 text-xs text-gray-500">
+                                <p>{shopSettings?.bankName} - {shopSettings?.bankAccount}</p>
+                                <p>{shopSettings?.bankOwner}</p>
+                                <p className="font-medium text-gray-700">Số tiền: {formatCurrency(amountDue > 0 ? amountDue : grandTotal)}</p>
+                                <p>Nội dung: {order.code}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bank info fallback if no QR available */}
+                {paymentMethod === "BANK" && !vietQRUrl && shopSettings?.bankAccount && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                        <div className="text-center bg-blue-50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-gray-700 mb-1">Thông tin chuyển khoản</p>
+                            <p className="text-sm">{shopSettings?.bankName}</p>
+                            <p className="text-lg font-bold text-blue-600">{shopSettings?.bankAccount}</p>
+                            <p className="text-sm">{shopSettings?.bankOwner}</p>
+                            <p className="text-sm mt-1 font-medium">Nội dung: {order.code}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-200">

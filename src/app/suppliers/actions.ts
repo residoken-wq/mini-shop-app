@@ -123,12 +123,15 @@ export async function createPurchaseOrder(data: {
                 });
             }
 
-            // 3. Handle Supplier Debt (We owe them)
+            // 3. Handle Supplier Debt (Only add unpaid amount)
             if (supplierId) {
-                await tx.supplier.update({
-                    where: { id: supplierId },
-                    data: { debt: { increment: total } }
-                });
+                const unpaidAmount = total - paid;
+                if (unpaidAmount > 0) {
+                    await tx.supplier.update({
+                        where: { id: supplierId },
+                        data: { debt: { increment: unpaidAmount } }
+                    });
+                }
             }
 
             // 4. Create Transaction Record (Purchase Slip - Unpaid)

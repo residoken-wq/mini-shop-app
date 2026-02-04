@@ -1,5 +1,6 @@
 import { getOrders } from "./actions";
 import { OrdersClient } from "./orders-client";
+import { getShopSettings } from "@/app/settings/actions";
 
 export const dynamic = 'force-dynamic';
 
@@ -7,6 +8,7 @@ import { db } from "@/lib/db";
 
 export default async function OrdersPage() {
     const orders = await getOrders();
+    const shopSettings = await getShopSettings();
 
     // Calculate total expenses from transactions
     const expenses = await db.transaction.aggregate({
@@ -21,7 +23,7 @@ export default async function OrdersPage() {
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Đơn hàng</h1>
             </div>
-            <OrdersClient initialOrders={orders} expensesTotal={expensesTotal} />
+            <OrdersClient initialOrders={orders} expensesTotal={expensesTotal} shopSettings={shopSettings} />
         </div>
     );
 }
