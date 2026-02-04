@@ -344,8 +344,9 @@ export default function OrderTracking() {
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Phương thức:</span>
                                                 <span className="font-medium">
-                                                    {order.paymentMethod === "COD" ? "💵 Tiền mặt (COD)" :
-                                                        order.paymentMethod === "QR" ? "📱 Chuyển khoản" : "📋 Công nợ"}
+                                                    {order.paymentMethod === "CASH" ? "💵 Tiền mặt" :
+                                                        order.paymentMethod === "COD" ? "💵 Tiền mặt (COD)" :
+                                                            order.paymentMethod === "QR" ? "📱 Chuyển khoản" : "📋 Công nợ"}
                                                 </span>
                                             </div>
 

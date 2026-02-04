@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Save, X, Percent, DollarSign, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { updateOrderItem, updateOrderDiscount, deleteOrderItem, getCarriers, updateOrderCarrierInfo, createCarrier } from "./actions";
+import { updateOrderItem, updateOrderDiscount, deleteOrderItem, getCarriers, updateOrderCarrierInfo, createCarrier, updateOrderPaymentMethod } from "./actions";
 
 type OrderItemWithProduct = OrderItem & { product: Product };
 
@@ -19,17 +19,21 @@ interface OrderEditableItemsProps {
     carrierName?: string;
     type: "SALE" | "PURCHASE";
     status: string;
+    paymentMethod: string;
     onUpdate: () => void;
 }
 
 const NON_EDITABLE_STATUSES = ["SHIPPING", "COMPLETED"];
 
-export function OrderEditableItems({ orderId, items, discount, shippingFee = 0, carrierName, type, status, onUpdate }: OrderEditableItemsProps) {
+export function OrderEditableItems({ orderId, items, discount, shippingFee = 0, carrierName, type, status, paymentMethod = "COD", onUpdate }: OrderEditableItemsProps) {
     const [editingItems, setEditingItems] = useState<Record<string, { quantity: number; price: number; unit?: string }>>({});
     const [currentDiscount, setCurrentDiscount] = useState(discount);
     const [discountType, setDiscountType] = useState<"fixed" | "percent">("fixed");
     const [discountPercent, setDiscountPercent] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Payment Method State
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethod);
 
     // Shipping State (PO Only)
     const [carriers, setCarriers] = useState<{ id: string; name: string }[]>([]);
@@ -180,6 +184,16 @@ export function OrderEditableItems({ orderId, items, discount, shippingFee = 0, 
             onUpdate();
         } else {
             alert(result.error || "Lỗi cập nhật vận chuyển");
+        }
+        setIsSaving(false);
+    };
+
+    const handleSavePaymentMethod = async (method: string) => {
+        setIsSaving(true);
+        const result = await updateOrderPaymentMethod(orderId, method);
+        if (result.success) {
+            setSelectedPaymentMethod(method);
+            onUpdate();
         }
         setIsSaving(false);
     };

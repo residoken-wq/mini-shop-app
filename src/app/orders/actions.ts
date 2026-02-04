@@ -145,6 +145,21 @@ export async function updateOrderStatus(id: string, status: string) {
     }
 }
 
+export async function updateOrderPaymentMethod(id: string, paymentMethod: string) {
+    try {
+        await db.order.update({
+            where: { id },
+            data: { paymentMethod }
+        });
+
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update payment method:", error);
+        return { success: false, error: "Failed to update payment method" };
+    }
+}
+
 export async function deleteOrder(id: string) {
     try {
         // Get order details first to check status and get relations

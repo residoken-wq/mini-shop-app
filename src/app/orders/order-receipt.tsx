@@ -183,32 +183,44 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                         </span>
                     </p>
 
-                    {/* Payment Method Selection */}
-                    <div className="mt-2">
-                        <span className="text-sm text-gray-500">Thanh toán:</span>
-                        <div className="flex gap-2 mt-1">
-                            <button
-                                type="button"
-                                onClick={() => setPaymentMethod("CASH")}
-                                className={`px-3 py-1 text-xs rounded-full border transition-colors ${paymentMethod === "CASH"
+                    {/* Payment Method Display */}
+                    <p className="text-sm">
+                        <span className="text-gray-500">Thanh toán:</span>{" "}
+                        <span className="font-medium">
+                            {order.paymentMethod === "CASH" ? "Tiền mặt" :
+                                order.paymentMethod === "COD" ? "Thu hộ (COD)" :
+                                    order.paymentMethod === "QR" ? "Chuyển khoản" : "Công nợ"}
+                        </span>
+                    </p>
+
+                    {/* QR Code Toggle (Only show if not cancelled) */}
+                    {order.status !== "CANCELLED" && (
+                        <div className="mt-2 pt-2 border-t border-dashed no-print">
+                            <span className="text-xs text-gray-500 block mb-1">Hiển thị mã thanh toán:</span>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("CASH")}
+                                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${paymentMethod === "CASH"
                                         ? "bg-green-500 text-white border-green-500"
                                         : "bg-white text-gray-600 border-gray-300 hover:border-green-400"
-                                    }`}
-                            >
-                                💵 Tiền mặt
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPaymentMethod("BANK")}
-                                className={`px-3 py-1 text-xs rounded-full border transition-colors ${paymentMethod === "BANK"
+                                        }`}
+                                >
+                                    Ẩn QR
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod("BANK")}
+                                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${paymentMethod === "BANK"
                                         ? "bg-blue-500 text-white border-blue-500"
                                         : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
-                                    }`}
-                            >
-                                📱 Chuyển khoản
-                            </button>
+                                        }`}
+                                >
+                                    Hiện QR
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Note */}
                     {order.note && (

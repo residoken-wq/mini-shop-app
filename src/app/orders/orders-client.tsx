@@ -615,6 +615,7 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                         carrierName={selectedOrder.carrierName || undefined}
                                         type={selectedOrder.type as "SALE" | "PURCHASE"}
                                         status={selectedOrder.status}
+                                        paymentMethod={selectedOrder.paymentMethod || "COD"}
                                         onUpdate={refreshOrders}
                                     />
                                 )}
