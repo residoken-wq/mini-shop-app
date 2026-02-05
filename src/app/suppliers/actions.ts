@@ -227,7 +227,8 @@ export async function recalculateSupplierDebt(supplierId: string) {
         const purchaseOrders = await db.order.findMany({
             where: {
                 supplierId: supplierId,
-                type: "PURCHASE"
+                type: "PURCHASE",
+                status: { not: "CANCELLED" }
             },
             select: {
                 total: true,
