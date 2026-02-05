@@ -26,9 +26,7 @@ interface ProductSelectionProps {
     onUpdateCartProducts: (freshProducts: Product[]) => void;
     getPromotionPrice: (productId: string, quantity: number) => number | null;
     getActivePromotionForProduct: (productId: string) => { promo: Promotion; promoProduct: { tiers: { minQuantity: number; price: number }[] } } | null;
-    onUpdateCartProducts: (freshProducts: Product[]) => void;
-    getPromotionPrice: (productId: string, quantity: number) => number | null;
-    getActivePromotionForProduct: (productId: string) => { promo: Promotion; promoProduct: { tiers: { minQuantity: number; price: number }[] } } | null;
+
     getProductTotal: () => number;
     getProductTotalWithPromo: () => number;
 }
@@ -48,7 +46,7 @@ export function ProductSelection({
     onUpdateCartProducts,
     getPromotionPrice,
     getActivePromotionForProduct,
-    getActivePromotionForProduct,
+
     getProductTotal,
     getProductTotalWithPromo,
 }: ProductSelectionProps) {
