@@ -79,7 +79,7 @@ export function ProductCard({
                     <h3 className="font-medium text-gray-900 leading-tight line-clamp-2">
                         {product.name}
                     </h3>
-                    <p className="text-xs text-gray-500 mt-0.5">{product.sku}</p>
+
                     {/* Promotion Display for Retail */}
                     {customerType === "retail" && activePromotion && (
                         <div className="mt-1 flex flex-col gap-1">
