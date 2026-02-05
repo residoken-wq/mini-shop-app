@@ -237,6 +237,7 @@ export default function PortalPage() {
                     getPromotionPrice={getPromotionPrice}
                     getActivePromotionForProduct={getActivePromotionForProduct}
                     getProductTotal={getProductTotal}
+                    getProductTotalWithPromo={getProductTotalWithPromo}
                 />
             )}
 

@@ -374,7 +374,9 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                                 <TableCell>{getTypeBadge(order.type)}</TableCell>
                                                 <TableCell>
                                                     {order.type === "SALE"
-                                                        ? (order.customer?.name || "Khách lẻ")
+                                                        ? (order.customer
+                                                            ? order.customer.name
+                                                            : (order.recipientName ? `Khách lẻ - ${order.recipientName}` : "Khách lẻ"))
                                                         : (order.supplier?.name || "-")}
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -393,6 +395,12 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                                             <div className="flex items-center gap-1 text-xs text-muted-foreground max-w-[150px] truncate" title={order.note}>
                                                                 <MessageSquare className="h-3 w-3 shrink-0" />
                                                                 <span className="truncate">{order.note}</span>
+                                                            </div>
+                                                        )}
+                                                        {order.deliveryNote && (
+                                                            <div className="flex items-center gap-1 text-xs text-blue-600 max-w-[150px] truncate" title={order.deliveryNote}>
+                                                                <Truck className="h-3 w-3 shrink-0" />
+                                                                <span className="truncate">{order.deliveryNote}</span>
                                                             </div>
                                                         )}
                                                     </div>

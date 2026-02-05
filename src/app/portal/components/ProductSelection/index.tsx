@@ -26,7 +26,11 @@ interface ProductSelectionProps {
     onUpdateCartProducts: (freshProducts: Product[]) => void;
     getPromotionPrice: (productId: string, quantity: number) => number | null;
     getActivePromotionForProduct: (productId: string) => { promo: Promotion; promoProduct: { tiers: { minQuantity: number; price: number }[] } } | null;
+    onUpdateCartProducts: (freshProducts: Product[]) => void;
+    getPromotionPrice: (productId: string, quantity: number) => number | null;
+    getActivePromotionForProduct: (productId: string) => { promo: Promotion; promoProduct: { tiers: { minQuantity: number; price: number }[] } } | null;
     getProductTotal: () => number;
+    getProductTotalWithPromo: () => number;
 }
 
 export function ProductSelection({
@@ -44,7 +48,9 @@ export function ProductSelection({
     onUpdateCartProducts,
     getPromotionPrice,
     getActivePromotionForProduct,
+    getActivePromotionForProduct,
     getProductTotal,
+    getProductTotalWithPromo,
 }: ProductSelectionProps) {
     const [products, setProducts] = useState<Product[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -160,7 +166,7 @@ export function ProductSelection({
             {/* Bottom Cart Bar */}
             <BottomCartBar
                 cart={cart}
-                total={getProductTotal()}
+                total={getProductTotalWithPromo()}
                 hasExpiredItems={hasExpiredItems}
                 onConfirm={onConfirm}
             />

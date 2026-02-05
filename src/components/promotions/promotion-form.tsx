@@ -14,6 +14,9 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
 import { createPromotion, updatePromotion } from "@/app/promotions/actions";
+import dynamic from "next/dynamic";
+
+const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor"), { ssr: false });
 
 interface Product {
     id: string;
@@ -244,10 +247,9 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
 
                 <div className="col-span-2 space-y-2">
                     <Label htmlFor="description">Mô tả</Label>
-                    <Input
-                        id="description"
+                    <RichTextEditor
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        onChange={setDescription}
                         placeholder="Ghi chú thêm về chương trình..."
                     />
                 </div>
