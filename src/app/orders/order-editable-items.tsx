@@ -481,6 +481,27 @@ export function OrderEditableItems({ orderId, items, discount, shippingFee = 0, 
                 </div>
             )}
 
+
+            {/* Payment Method Section (SALE Only) */}
+            {isEditable && type === "SALE" && (
+                <div className="border rounded-lg p-3 bg-green-50">
+                    <p className="text-sm font-medium text-green-700 mb-2">💳 Hình thức thanh toán</p>
+                    <div className="flex gap-2">
+                        <select
+                            className="flex-1 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            value={selectedPaymentMethod}
+                            onChange={(e) => handleSavePaymentMethod(e.target.value)}
+                            disabled={isSaving}
+                        >
+                            <option value="COD">Thu hộ (COD)</option>
+                            <option value="QR">Chuyển khoản (QR)</option>
+                            <option value="CASH">Tiền mặt</option>
+                            <option value="DEBT">Công nợ</option>
+                        </select>
+                    </div>
+                </div>
+            )}
+
             {/* Summary */}
             <div className="border-t pt-3 space-y-1">
                 <div className="flex justify-between text-sm">
