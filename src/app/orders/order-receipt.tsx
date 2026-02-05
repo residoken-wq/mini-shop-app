@@ -331,6 +331,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                     <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
                         <div className="text-center">
                             <p className="text-sm font-medium text-gray-700 mb-2">Quét mã để thanh toán</p>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={vietQRUrl}
                                 alt="VietQR Payment"

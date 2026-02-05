@@ -51,6 +51,7 @@ export default function PortalPage() {
         getFinalTotal,
         getCartItemPrice,
         getPromotionPrice,
+        getActivePromotionForProduct,
         hasExpiredItems,
     } = useCart({ promotions });
 
