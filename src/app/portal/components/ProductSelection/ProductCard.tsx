@@ -5,13 +5,14 @@ import { Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Product, CartItem, formatCurrency } from "../../types";
+import { Product, CartItem, formatCurrency, Promotion } from "../../types";
 import { getImageUrl } from "@/lib/image-utils";
 
 interface ProductCardProps {
     product: Product;
     cartItem: CartItem | undefined;
     promotionPrice: number | null;
+    activePromotion?: { promo: Promotion; promoProduct: { tiers: { minQuantity: number; price: number }[] } } | null;
     customerType: "retail" | "wholesale" | null;
     onAdd: () => void;
     onUpdateQuantity: (delta: number) => void;
@@ -23,6 +24,7 @@ export function ProductCard({
     product,
     cartItem,
     promotionPrice,
+    activePromotion,
     customerType,
     onAdd,
     onUpdateQuantity,
@@ -78,6 +80,30 @@ export function ProductCard({
                         {product.name}
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">{product.sku}</p>
+                    {/* Promotion Display for Retail */}
+                    {customerType === "retail" && activePromotion && (
+                        <div className="mt-1 flex flex-col gap-1">
+                            <Badge className="w-fit bg-red-50 text-red-600 border-red-100 text-[10px] px-1.5 py-0.5 hover:bg-red-50">
+                                🎁 {activePromotion.promo.name}
+                            </Badge>
+                            <div className="flex flex-wrap gap-1">
+                                {activePromotion.promoProduct.tiers.map(t => (
+                                    <span
+                                        key={t.minQuantity}
+                                        className={cn(
+                                            "text-[10px] px-1 py-0.5 rounded border transition-colors",
+                                            baseQty >= t.minQuantity
+                                                ? "bg-red-100 border-red-200 text-red-700 font-bold"
+                                                : "bg-gray-50 border-gray-100 text-gray-500"
+                                        )}
+                                    >
+                                        Mua ≥{t.minQuantity}: {formatCurrency(t.price)}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {customerType === "wholesale" && product.hasWholesalePrice && (
                         <div className="flex flex-wrap gap-1 mt-1">
                             <Badge className="bg-purple-100 text-purple-700 text-xs hover:bg-purple-100">

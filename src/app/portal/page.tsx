@@ -234,6 +234,7 @@ export default function PortalPage() {
                     onRemoveFromCart={removeFromCart}
                     onUpdateCartProducts={updateCartProducts}
                     getPromotionPrice={getPromotionPrice}
+                    getActivePromotionForProduct={getActivePromotionForProduct}
                     getProductTotal={getProductTotal}
                 />
             )}

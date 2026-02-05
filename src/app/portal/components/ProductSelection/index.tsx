@@ -25,6 +25,7 @@ interface ProductSelectionProps {
     onRemoveFromCart: (productId: string) => void;
     onUpdateCartProducts: (freshProducts: Product[]) => void;
     getPromotionPrice: (productId: string, quantity: number) => number | null;
+    getActivePromotionForProduct: (productId: string) => { promo: Promotion; promoProduct: { tiers: { minQuantity: number; price: number }[] } } | null;
     getProductTotal: () => number;
 }
 
@@ -42,6 +43,7 @@ export function ProductSelection({
     onRemoveFromCart,
     onUpdateCartProducts,
     getPromotionPrice,
+    getActivePromotionForProduct,
     getProductTotal,
 }: ProductSelectionProps) {
     const [products, setProducts] = useState<Product[]>([]);
@@ -135,6 +137,7 @@ export function ProductSelection({
                         const ratio = product.saleUnit ? (product.saleRatio || 1) : 1;
                         const baseQty = (cartItem?.quantity || 1) * ratio;
                         const promoPrice = getPromotionPrice(product.id, baseQty);
+                        const activePromotion = getActivePromotionForProduct ? getActivePromotionForProduct(product.id) : null;
 
                         return (
                             <ProductCard
@@ -142,6 +145,7 @@ export function ProductSelection({
                                 product={product}
                                 cartItem={cartItem}
                                 promotionPrice={promoPrice}
+                                activePromotion={activePromotion}
                                 customerType={customerType}
                                 onAdd={() => onAddToCart(product)}
                                 onUpdateQuantity={(delta) => onUpdateQuantity(product.id, delta)}
