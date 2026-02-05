@@ -24,7 +24,10 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
                             <div className="flex-1">
                                 <p className="font-medium text-gray-800">{promo.name}</p>
                                 {promo.description && (
-                                    <p className="text-sm text-gray-600">{promo.description}</p>
+                                    <div
+                                        className="text-sm text-gray-600 prose prose-sm max-w-none [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
+                                        dangerouslySetInnerHTML={{ __html: promo.description }}
+                                    />
                                 )}
                                 <p className="text-xs text-gray-500 mt-1">
                                     Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
