@@ -225,7 +225,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                     {/* Note */}
                     {order.note && (
                         <p className="text-sm mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                            <span className="text-gray-600">📝 Ghi chú:</span> {order.note}
+                            <span className="text-gray-600">📝 Ghi chú đơn hàng:</span> {order.note}
                         </p>
                     )}
                 </div>

@@ -352,12 +352,11 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                         <TableHead>Mã đơn</TableHead>
                                         <TableHead>Loại</TableHead>
                                         <TableHead>Khách/NCC</TableHead>
-                                        <TableHead className="text-right">Phí VC</TableHead>
+                                        <TableHead className="text-right">Phí VC / Ghi chú</TableHead>
                                         <TableHead className="text-right">Thanh toán</TableHead>
                                         <TableHead className="text-right">Lợi nhuận</TableHead>
                                         <TableHead className="text-right">Tổng tiền</TableHead>
                                         <TableHead>Trạng thái</TableHead>
-                                        <TableHead>Ghi chú GH</TableHead>
                                         <TableHead>Ngày tạo</TableHead>
                                         <TableHead className="w-[100px]">Thao tác</TableHead>
                                     </TableRow>
@@ -379,14 +378,24 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                                         : (order.supplier?.name || "-")}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    {order.shippingFee > 0 ? (
-                                                        <div className="flex items-center justify-end gap-1">
-                                                            <span>{new Intl.NumberFormat('vi-VN').format(order.shippingFee)}</span>
-                                                            <span title={order.shippingPaidBy === "SHOP" ? "Shop trả" : "Khách trả"}>
-                                                                {order.shippingPaidBy === "SHOP" ? "🏪" : "👤"}
-                                                            </span>
-                                                        </div>
-                                                    ) : "-"}
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        {order.shippingFee > 0 ? (
+                                                            <div className="flex items-center justify-end gap-1">
+                                                                <span>{new Intl.NumberFormat('vi-VN').format(order.shippingFee)}</span>
+                                                                <span title={order.shippingPaidBy === "SHOP" ? "Shop trả" : "Khách trả"}>
+                                                                    {order.shippingPaidBy === "SHOP" ? "🏪" : "👤"}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">-</span>
+                                                        )}
+                                                        {order.note && (
+                                                            <div className="flex items-center gap-1 text-xs text-muted-foreground max-w-[150px] truncate" title={order.note}>
+                                                                <MessageSquare className="h-3 w-3 shrink-0" />
+                                                                <span className="truncate">{order.note}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex flex-col items-end">
@@ -409,14 +418,6 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                                     {new Intl.NumberFormat('vi-VN').format(order.total)} đ
                                                 </TableCell>
                                                 <TableCell>{getStatusBadge(order.status)}</TableCell>
-                                                <TableCell className="text-muted-foreground text-sm max-w-[150px]">
-                                                    {order.note ? (
-                                                        <div className="flex items-center gap-1 truncate" title={order.note}>
-                                                            <MessageSquare className="h-3 w-3 shrink-0" />
-                                                            <span className="truncate">{order.note}</span>
-                                                        </div>
-                                                    ) : "-"}
-                                                </TableCell>
                                                 <TableCell className="text-muted-foreground text-sm">
                                                     {new Date(order.createdAt).toLocaleDateString('vi-VN')}
                                                 </TableCell>
