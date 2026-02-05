@@ -344,3 +344,28 @@ export async function updatePurchaseOrderStatus(orderId: string, status: string)
     }
 }
 
+export async function updatePurchaseOrderPayment(orderId: string, paid: number) {
+    try {
+        const order = await db.order.findUnique({
+            where: { id: orderId }
+        });
+
+        if (!order) return { success: false, error: "Order not found" };
+
+        await db.order.update({
+            where: { id: orderId },
+            data: { paid }
+        });
+
+        // Recalculate debt for this supplier to ensure consistency
+        if (order.supplierId) {
+            await recalculateSupplierDebt(order.supplierId);
+        }
+
+        revalidatePath("/suppliers");
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: "Failed to update payment" };
+    }
+}
+

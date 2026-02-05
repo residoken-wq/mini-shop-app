@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Eye, Truck, Package, CreditCard, Check, X, Clock } from "lucide-react";
-import { paySupplierDebt, updatePurchaseOrderStatus } from "./actions";
+import { Search, Eye, Truck, Package, CreditCard, Check, X, Clock, Edit } from "lucide-react";
+import { paySupplierDebt, updatePurchaseOrderStatus, updatePurchaseOrderPayment } from "./actions";
 
 type PurchaseOrderWithRelations = Order & {
     supplier: Supplier | null;
@@ -32,6 +32,10 @@ export default function PurchaseHistory({ initialOrders, suppliers }: PurchaseHi
     const [payDebtOpen, setPayDebtOpen] = useState(false);
     const [payDebtSupplier, setPayDebtSupplier] = useState<Supplier | null>(null);
     const [payDebtAmount, setPayDebtAmount] = useState("");
+
+    // Edit Payment State
+    const [isEditingPayment, setIsEditingPayment] = useState(false);
+    const [editPaymentAmount, setEditPaymentAmount] = useState("");
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch = order.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -78,6 +82,26 @@ export default function PurchaseHistory({ initialOrders, suppliers }: PurchaseHi
             setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
         } else {
             alert("Lỗi cập nhật trạng thái: " + res.error);
+        }
+    };
+
+    const handleUpdatePayment = async (orderId: string) => {
+        const amount = parseFloat(editPaymentAmount);
+        if (isNaN(amount) || amount < 0) {
+            alert("Số tiền không hợp lệ");
+            return;
+        }
+
+        const res = await updatePurchaseOrderPayment(orderId, amount);
+        if (res.success) {
+            alert("Đã cập nhật số tiền đã trả");
+            setIsEditingPayment(false);
+            setOrders(orders.map(o => o.id === orderId ? { ...o, paid: amount } : o));
+            if (selectedOrder && selectedOrder.id === orderId) {
+                setSelectedOrder({ ...selectedOrder, paid: amount });
+            }
+        } else {
+            alert("Lỗi: " + res.error);
         }
     };
 
@@ -271,6 +295,48 @@ export default function PurchaseHistory({ initialOrders, suppliers }: PurchaseHi
                                     <span className="text-muted-foreground">Ngày tạo:</span>
                                     <p className="font-medium">
                                         {new Date(selectedOrder.createdAt).toLocaleString('vi-VN')}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t">
+                                <div>
+                                    <span className="text-muted-foreground mr-2">Đã trả:</span>
+                                    {isEditingPayment ? (
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <Input
+                                                type="number"
+                                                className="h-8 w-32"
+                                                value={editPaymentAmount}
+                                                onChange={(e) => setEditPaymentAmount(e.target.value)}
+                                            />
+                                            <Button size="sm" onClick={() => handleUpdatePayment(selectedOrder.id)}>Lưu</Button>
+                                            <Button size="sm" variant="ghost" onClick={() => setIsEditingPayment(false)}>Hủy</Button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-green-600">
+                                                {new Intl.NumberFormat('vi-VN').format(selectedOrder.paid)}đ
+                                            </span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                title="Sửa số tiền đã trả"
+                                                onClick={() => {
+                                                    setIsEditingPayment(true);
+                                                    setEditPaymentAmount(selectedOrder.paid.toString());
+                                                }}
+                                            >
+                                                <Edit className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <span className="text-muted-foreground">Còn nợ:</span>
+                                    <p className="font-bold text-red-600">
+                                        {new Intl.NumberFormat('vi-VN').format(Math.max(0, selectedOrder.total - selectedOrder.paid))}đ
                                     </p>
                                 </div>
                             </div>
