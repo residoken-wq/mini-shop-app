@@ -7,46 +7,24 @@ interface PromotionBannerProps {
     promotions: Promotion[];
 }
 
-export function PromotionBanner({ promotions }: PromotionBannerProps) {
-    if (promotions.length === 0) return null;
-
-    const getBannerUrl = (url: string | null) => {
-        if (!url) return undefined;
-        try {
-            // Handle Google Drive links
-            if (url.includes('drive.google.com')) {
-                const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (idMatch && idMatch[1]) {
-                    return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1200`;
-                }
+const getBannerUrl = (url: string | null) => {
+    if (!url) return undefined;
+    try {
+        // Handle Google Drive links
+        if (url.includes('drive.google.com')) {
+            const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1200`;
             }
-            return url;
-        } catch (e) {
-            return url;
         }
-    };
-
-    return promotions.length > 0 ? getBannerUrl : null;
-}
+        return url;
+    } catch (e) {
+        return url;
+    }
+};
 
 export function PromotionImages({ promotions }: PromotionBannerProps) {
     if (promotions.length === 0) return null;
-
-    const getBannerUrl = (url: string | null) => {
-        if (!url) return undefined;
-        try {
-            // Handle Google Drive links
-            if (url.includes('drive.google.com')) {
-                const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (idMatch && idMatch[1]) {
-                    return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1200`;
-                }
-            }
-            return url;
-        } catch (e) {
-            return url;
-        }
-    };
 
     return (
         <div className="space-y-4">
@@ -76,42 +54,38 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
             </div>
             <div className="space-y-2">
                 {promotions.map((promo) => (
-                    <div className="flex items-start gap-2">
-                        <Percent className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                        <div className="flex-1">
-                            <p className="font-medium text-gray-800">{promo.name}</p>
-                            {promo.description && (
-                                <div
-                                    className="text-sm text-gray-600 prose prose-sm max-w-none [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
-                                    dangerouslySetInnerHTML={{ __html: promo.description }}
-                                />
+                    <div key={promo.id} className="bg-white/60 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                            <Percent className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                            <div className="flex-1">
+                                <p className="font-medium text-gray-800">{promo.name}</p>
+                                {promo.description && (
+                                    <div
+                                        className="text-sm text-gray-600 prose prose-sm max-w-none [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
+                                        dangerouslySetInnerHTML={{ __html: promo.description }}
+                                    />
+                                )}
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
+                                </p>
+                            </div>
+                        </div>
+                        {/* Show promotional products */}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {promo.products.slice(0, 3).map((pp) => (
+                                <div key={pp.productId} className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+                                    <span className="font-medium">{pp.productName}</span>
+                                </div>
+                            ))}
+                            {promo.products.length > 3 && (
+                                <span className="text-xs text-amber-600">
+                                    +{promo.products.length - 3} sản phẩm khác
+                                </span>
                             )}
-                            <p className="text-xs text-gray-500 mt-1">
-                                Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
-                            </p>
                         </div>
                     </div>
-                            {/* Show promotional products */ }
-                    < div className = "mt-2 flex flex-wrap gap-2" >
-                    {
-                        promo.products.slice(0, 3).map((pp) => (
-                            <div key={pp.productId} className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
-                                <span className="font-medium">{pp.productName}</span>
-                            </div>
-                        ))
-                    }
-                                {
-                        promo.products.length > 3 && (
-                            <span className="text-xs text-amber-600">
-                                +{promo.products.length - 3} sản phẩm khác
-                            </span>
-                        )
-                    }
-                            </div>
+                ))}
+            </div>
         </div>
-    ))
-}
-            </div >
-        </div >
     );
 }
