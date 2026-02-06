@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle, Edit, ChevronLeft, Calendar, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { deleteOrder, updateOrderStatus, getOrders } from "./actions";
+import { deleteOrder, updateOrderStatus, getOrders, addOrderPayment } from "./actions";
 import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-constants";
 import { OrderReceipt } from "./order-receipt";
 import { OrderEditableItems } from "./order-editable-items";
@@ -44,6 +44,13 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
     const [showShippingList, setShowShippingList] = useState(false);
     const [showShippingDialog, setShowShippingDialog] = useState(false);
     const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
+
+    // Manual Payment State
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState(0);
+    const [paymentMethod, setPaymentMethod] = useState("CASH");
+    const [paymentNote, setPaymentNote] = useState("");
+
     const [dateFilter, setDateFilter] = useState<"ALL" | "TODAY" | "WEEK" | "MONTH">("ALL");
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 20;
@@ -129,6 +136,31 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
             setOrders(prev => prev.filter(o => o.id !== id));
         } else {
             alert("Lỗi xóa đơn hàng");
+        }
+    };
+
+    const handleAddPayment = async () => {
+        if (!selectedOrder) return;
+        if (paymentAmount <= 0) {
+            alert("Số tiền phải lớn hơn 0");
+            return;
+        }
+
+        const result = await addOrderPayment({
+            orderId: selectedOrder.id,
+            amount: paymentAmount,
+            paymentMethod,
+            note: paymentNote
+        });
+
+        if (result.success) {
+            alert("Đã thêm thanh toán thành công");
+            setShowPaymentDialog(false);
+            setPaymentAmount(0);
+            setPaymentNote("");
+            refreshOrders();
+        } else {
+            alert(result.error || "Lỗi thêm thanh toán");
         }
     };
 
@@ -591,8 +623,30 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                     </div>
                                 )}
 
+                                {/* Manual Payment Button */}
+                                {selectedOrder.status === "COMPLETED" && (selectedOrder as any).paid < selectedOrder.total && (
+                                    <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mt-4 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-orange-800">Thanh toán chưa đủ</p>
+                                            <p className="text-xs text-orange-600">
+                                                Đã thanh toán: {new Intl.NumberFormat('vi-VN').format((selectedOrder as any).paid || 0)} / {new Intl.NumberFormat('vi-VN').format(selectedOrder.total)}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => {
+                                                setPaymentAmount(selectedOrder.total - ((selectedOrder as any).paid || 0));
+                                                setShowPaymentDialog(true);
+                                            }}
+                                            className="bg-orange-600 hover:bg-orange-700"
+                                        >
+                                            Thêm thanh toán
+                                        </Button>
+                                    </div>
+                                )}
+
                                 {/* View Mode Tabs */}
-                                <div className="flex gap-2 border-b pb-2">
+                                <div className="flex gap-2 border-b pb-2 mt-4">
                                     <Button
                                         size="sm"
                                         variant={viewMode === "receipt" ? "default" : "outline"}
@@ -608,6 +662,8 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                         <Edit className="w-4 h-4 mr-1" />
                                         Chỉnh sửa
                                     </Button>
+                                    {/* Debug Button */}
+                                    {/* <button onClick={() => console.log(selectedOrder)}>Log Order</button> */}
                                 </div>
 
                                 {/* Content based on view mode */}
@@ -645,6 +701,49 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                 {isPrinting ? "Đang tạo hình ảnh..." : "Tải hình ảnh hóa đơn"}
                             </Button>
                         </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Payment Dialog */}
+                <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+                    <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                            <DialogTitle>Thêm thanh toán</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Số tiền</label>
+                                <Input
+                                    type="number"
+                                    value={paymentAmount}
+                                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Hình thức</label>
+                                <select
+                                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    value={paymentMethod}
+                                    onChange={(e) => setPaymentMethod(e.target.value)}
+                                >
+                                    <option value="CASH">Tiền mặt</option>
+                                    <option value="QR">Chuyển khoản</option>
+                                    <option value="COD">Thu hộ (COD)</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Ghi chú</label>
+                                <Input
+                                    value={paymentNote}
+                                    onChange={(e) => setPaymentNote(e.target.value)}
+                                    placeholder="Ghi chú thanh toán..."
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Hủy</Button>
+                            <Button onClick={handleAddPayment}>Xác nhận</Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 

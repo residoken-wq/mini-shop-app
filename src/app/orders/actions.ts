@@ -949,3 +949,49 @@ export async function sendDeliveredNotification(orderId: string): Promise<Messag
         return { success: false, error: "Lỗi gửi tin nhắn" };
     }
 }
+
+export async function addOrderPayment(data: {
+    orderId: string;
+    amount: number;
+    paymentMethod: string;
+    note?: string;
+}) {
+    try {
+        const order = await db.order.findUnique({
+            where: { id: data.orderId },
+            include: { customer: true }
+        });
+
+        if (!order) return { success: false, error: "Không tìm thấy đơn hàng" };
+
+        const newPaid = (order.paid || 0) + data.amount;
+
+        if (newPaid > order.total) {
+            return { success: false, error: "Số tiền thanh toán vượt quá tổng giá trị đơn hàng" };
+        }
+
+        // 1. Create Income Transaction
+        await db.transaction.create({
+            data: {
+                type: "INCOME",
+                amount: data.amount,
+                description: `Thanh toán bổ sung đơn hàng #${order.code} - ${data.note || "Thanh toán thủ công"}`,
+                customerId: order.customerId,
+                paymentMethod: data.paymentMethod,
+                orderId: order.id
+            }
+        });
+
+        // 2. Update Order Paid Amount
+        await db.order.update({
+            where: { id: data.orderId },
+            data: { paid: newPaid }
+        });
+
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Add payment error:", error);
+        return { success: false, error: "Lỗi thêm thanh toán" };
+    }
+}
