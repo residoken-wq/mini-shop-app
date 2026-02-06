@@ -31,6 +31,7 @@ export function PromotionImages({ promotions }: PromotionBannerProps) {
             {promotions.map((promo) => (
                 promo.bannerUrl && (
                     <div key={promo.id} className="relative w-full overflow-hidden rounded-lg">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={getBannerUrl(promo.bannerUrl)}
                             alt={promo.name}

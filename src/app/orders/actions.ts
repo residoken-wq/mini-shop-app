@@ -978,7 +978,7 @@ export async function addOrderPayment(data: {
                 description: `Thanh toán bổ sung đơn hàng #${order.code} - ${data.note || "Thanh toán thủ công"}`,
                 customerId: order.customerId,
                 paymentMethod: data.paymentMethod,
-                orderId: order.id
+                // orderId field does not exist in Transaction model
             }
         });
 
