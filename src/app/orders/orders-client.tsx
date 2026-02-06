@@ -208,8 +208,8 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
         );
     };
 
-    // Calculate profits
-    const completedSaleOrders = orders.filter(o => o.type === "SALE" && o.status === "COMPLETED");
+    // Calculate profits based on filtered orders
+    const completedSaleOrders = filteredOrders.filter(o => o.type === "SALE" && o.status === "COMPLETED");
 
     // Revenue
     const totalRevenue = completedSaleOrders.reduce((sum, o) => sum + o.total, 0);
@@ -221,11 +221,15 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
     }, 0);
 
     // Shop shipping fees (paid by shop)
-    const shopShippingFees = orders
+    const shopShippingFees = filteredOrders
         .filter(o => o.type === "SALE" && o.status === "COMPLETED" && o.shippingPaidBy === "SHOP")
         .reduce((sum, o) => sum + (o.shippingFee || 0), 0);
 
     // Gross Profit = Order Profit - Expenses - Shop Shipping Fees
+    // Note: expensesTotal is global, so it might need adjustment if we want it filtered by date too, 
+    // but for now we only filter order-related metrics. 
+    // If expensesTotal needs to be filtered, we'd need to fetch filtered expenses.
+    // Assuming user wants to see Order Profit primarily changed by filter.
     const grossProfit = totalOrderProfit - expensesTotal - shopShippingFees;
 
     return (
@@ -520,8 +524,7 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                         </DialogHeader>
                         {selectedOrder && (
                             <div className="flex-1 overflow-y-auto space-y-4">
-                                {/* Status Progress - Only for SALE orders */}
-                                {selectedOrder.type === "SALE" && (
+                                {selectedOrder && (
                                     <div className="bg-gray-50 rounded-lg p-4">
                                         <p className="text-sm font-medium text-gray-600 mb-3">Tiến trình xử lý</p>
                                         <div className="flex items-center justify-between">
@@ -556,7 +559,7 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                             <span>Chờ</span>
                                             <span>Xử lý</span>
                                             <span>Đủ hàng</span>
-                                            <span>Giao</span>
+                                            <span>{selectedOrder.type === "PURCHASE" ? "Vận chuyển" : "Giao"}</span>
                                             <span>Xong</span>
                                         </div>
 
@@ -565,8 +568,10 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                             <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
                                                 <span className="text-sm text-gray-500 mr-2">Chuyển sang:</span>
                                                 {getAllowedNextStatuses(selectedOrder.status).map(nextStatus => {
-                                                    // For READY -> SHIPPING, open shipping dialog
-                                                    if (selectedOrder.status === "READY" && nextStatus === "SHIPPING") {
+                                                    // For READY -> SHIPPING, open shipping dialog (Only for SALE?)
+                                                    // For PURCHASE, maybe we skip shipping dialog or treat it simply?
+                                                    // Let's allow simple transition for now.
+                                                    if (selectedOrder.type === "SALE" && selectedOrder.status === "READY" && nextStatus === "SHIPPING") {
                                                         return (
                                                             <Button
                                                                 key={nextStatus}
@@ -580,8 +585,8 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                                             </Button>
                                                         );
                                                     }
-                                                    // For SHIPPING -> COMPLETED, open delivery dialog
-                                                    if (selectedOrder.status === "SHIPPING" && nextStatus === "COMPLETED") {
+                                                    // For SHIPPING -> COMPLETED, open delivery dialog (Only for SALE?)
+                                                    if (selectedOrder.type === "SALE" && selectedOrder.status === "SHIPPING" && nextStatus === "COMPLETED") {
                                                         return (
                                                             <Button
                                                                 key={nextStatus}
@@ -595,7 +600,10 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                                             </Button>
                                                         );
                                                     }
-                                                    // Other status changes - direct update
+
+                                                    // For PURCHASE, allow direct transition
+                                                    // Maybe rename "Giao hàng" to "Đang về" for Purchase?
+
                                                     return (
                                                         <Button
                                                             key={nextStatus}

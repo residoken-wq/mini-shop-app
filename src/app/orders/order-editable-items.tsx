@@ -482,8 +482,8 @@ export function OrderEditableItems({ orderId, items, discount, shippingFee = 0, 
             )}
 
 
-            {/* Payment Method Section (SALE Only) */}
-            {isEditable && type === "SALE" && (
+            {/* Payment Method Section */}
+            {isEditable && (
                 <div className="border rounded-lg p-3 bg-green-50">
                     <p className="text-sm font-medium text-green-700 mb-2">💳 Hình thức thanh toán</p>
                     <div className="flex gap-2">
@@ -493,9 +493,12 @@ export function OrderEditableItems({ orderId, items, discount, shippingFee = 0, 
                             onChange={(e) => handleSavePaymentMethod(e.target.value)}
                             disabled={isSaving}
                         >
-                            <option value="COD">Thu hộ (COD)</option>
-                            <option value="QR">Chuyển khoản (QR)</option>
+                            {/* Options specific to SALE or generic? */}
+                            {type === "SALE" && <option value="COD">Thu hộ (COD)</option>}
+                            {type === "SALE" && <option value="QR">Chuyển khoản (QR)</option>}
                             <option value="CASH">Tiền mặt</option>
+                            {/* For PO, maybe 'TRANSFER'? use generic names? */}
+                            {type === "PURCHASE" && <option value="BANK">Chuyển khoản</option>}
                             <option value="DEBT">Công nợ</option>
                         </select>
                     </div>
