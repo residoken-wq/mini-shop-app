@@ -34,6 +34,7 @@ export async function getActivePromotions() {
             id: promo.id,
             name: promo.name,
             description: promo.description,
+            bannerUrl: promo.bannerUrl,
             startDate: promo.startDate,
             endDate: promo.endDate,
             products: promo.products.map(pp => ({
