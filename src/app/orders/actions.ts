@@ -71,26 +71,67 @@ export async function updateOrderStatus(id: string, status: string) {
                     });
                 }
 
-                // A2. Handle Debt (Unpaid Amount)
-                if (currentOrder.customerId && currentOrder.paid < currentOrder.total) {
-                    const debtAmount = currentOrder.total - currentOrder.paid;
-                    await db.customer.update({
-                        where: { id: currentOrder.customerId },
-                        data: { debt: { increment: debtAmount } }
-                    });
-                }
+                // A2. Handle Payment & Debt
+                const remainingAmount = currentOrder.total - currentOrder.paid;
 
-                // A3. Create Transaction for Income (Paid Amount)
-                if (currentOrder.paid > 0) {
-                    await db.transaction.create({
-                        data: {
-                            type: "INCOME",
-                            amount: currentOrder.paid,
-                            description: `Order #${currentOrder.code} - Payment`,
-                            customerId: currentOrder.customerId,
-                            paymentMethod: currentOrder.paymentMethod
-                        }
-                    });
+                if (currentOrder.paymentMethod === "CREDIT") {
+                    // For CREDIT: remaining amount is added to Debt
+                    if (currentOrder.customerId && remainingAmount > 0) {
+                        await db.customer.update({
+                            where: { id: currentOrder.customerId },
+                            data: { debt: { increment: remainingAmount } }
+                        });
+                    }
+
+                    // Logic for pre-paid amount in CREDIT orders? 
+                    // If paid > 0, we assume it's already accounted for or we record it now?
+                    // Existing logic recorded `currentOrder.paid` as INCOME. 
+                    // Let's preserve that for non-credit parts.
+                    if (currentOrder.paid > 0) {
+                        await db.transaction.create({
+                            data: {
+                                type: "INCOME",
+                                amount: currentOrder.paid,
+                                description: `Order #${currentOrder.code} - Partial Payment`,
+                                customerId: currentOrder.customerId,
+                                paymentMethod: "CASH" // Assumed
+                            }
+                        });
+                    }
+
+                } else {
+                    // For NON-CREDIT (COD, CASH, etc.):
+                    // 1. Transaction for ALREADY paid amount (if any, pending confirmation)
+                    if (currentOrder.paid > 0) {
+                        await db.transaction.create({
+                            data: {
+                                type: "INCOME",
+                                amount: currentOrder.paid,
+                                description: `Order #${currentOrder.code} - Pre-Payment`,
+                                customerId: currentOrder.customerId,
+                                paymentMethod: currentOrder.paymentMethod || "CASH"
+                            }
+                        });
+                    }
+
+                    // 2. Auto-pay the REMAINING amount (assume full payment upon completion)
+                    if (remainingAmount > 0) {
+                        await db.transaction.create({
+                            data: {
+                                type: "INCOME",
+                                amount: remainingAmount,
+                                description: `Order #${currentOrder.code} - Final Payment`,
+                                customerId: currentOrder.customerId,
+                                paymentMethod: currentOrder.paymentMethod || "CASH"
+                            }
+                        });
+
+                        // Update order to fully paid
+                        await db.order.update({
+                            where: { id },
+                            data: { paid: currentOrder.total }
+                        });
+                    }
                 }
             }
 
@@ -708,6 +749,35 @@ export async function completeDelivery(orderId: string, data: {
             return { success: false, error: "Order must be in SHIPPING status" };
         }
 
+        // Calculate remaining amount to pay (Total - Paid - Returns)
+        const remainingAmount = order.total - (order.paid || 0) - (data.returnedAmount || 0);
+        let finalPaid = order.paid || 0;
+
+        // Handle Payment / Debt
+        if (order.paymentMethod === "CREDIT") {
+            // For CREDIT: Add remaining to customer debt
+            if (order.customerId && remainingAmount > 0) {
+                await db.customer.update({
+                    where: { id: order.customerId },
+                    data: { debt: { increment: remainingAmount } }
+                });
+            }
+        } else {
+            // For COD/CASH: Assume collection of remaining amount
+            if (remainingAmount > 0) {
+                await db.transaction.create({
+                    data: {
+                        type: "INCOME",
+                        amount: remainingAmount,
+                        description: `Thanh toán đơn hàng #${order.code}`,
+                        customerId: order.customerId,
+                        paymentMethod: order.paymentMethod || "CASH"
+                    }
+                });
+                finalPaid += remainingAmount;
+            }
+        }
+
         // Update order to COMPLETED
         await db.order.update({
             where: { id: orderId },
@@ -716,7 +786,8 @@ export async function completeDelivery(orderId: string, data: {
                 returnedAmount: data.returnedAmount,
                 refundAmount: data.refundAmount,
                 returnNote: data.returnNote,
-                completedAt: new Date()
+                completedAt: new Date(),
+                paid: finalPaid // Update paid amount
             }
         });
 
