@@ -4,7 +4,7 @@ interface ProgressIndicatorProps {
     currentStep: number;
 }
 
-const stepLabels = ["Loại khách", "Chọn hàng", "Xác nhận"];
+const stepLabels = ["Khách hàng", "Chọn hàng", "Xác nhận"];
 
 export function ProgressIndicator({ currentStep }: ProgressIndicatorProps) {
     return (

@@ -36,11 +36,11 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
                 {promotions.map((promo) => (
                     <div key={promo.id} className="bg-white/60 rounded-lg p-3">
                         {promo.bannerUrl && (
-                            <div className="relative w-full aspect-[3/1] md:aspect-[4/1] overflow-hidden rounded-lg mb-3">
+                            <div className="relative w-full overflow-hidden rounded-lg mb-4">
                                 <img
                                     src={getBannerUrl(promo.bannerUrl)}
                                     alt={promo.name}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-auto object-contain"
                                 />
                             </div>
                         )}
