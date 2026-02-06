@@ -48,6 +48,7 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
 
     // Form State
     const [name, setName] = useState(initialData?.name || "");
+    const [bannerUrl, setBannerUrl] = useState(initialData?.bannerUrl || "");
     const [description, setDescription] = useState(initialData?.description || "");
     const [startDate, setStartDate] = useState(
         initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : ""
@@ -159,6 +160,7 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
         const payload = {
             name,
             description,
+            bannerUrl,
             startDate: new Date(startDate),
             endDate: new Date(endDate),
             isActive,
@@ -252,6 +254,19 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
                         onChange={setDescription}
                         placeholder="Ghi chú thêm về chương trình..."
                     />
+                </div>
+
+                <div className="col-span-2 space-y-2">
+                    <Label htmlFor="bannerUrl">Link Banner (Google Drive/Image)</Label>
+                    <Input
+                        id="bannerUrl"
+                        value={bannerUrl}
+                        onChange={(e) => setBannerUrl(e.target.value)}
+                        placeholder="https://drive.google.com/..."
+                    />
+                    <p className="text-xs text-muted-foreground text-orange-600">
+                        * Kích thước file nhỏ hơn 3MB. Ưu tiên tỉ lệ tương thích mobile (ví dụ 3:1 hoặc 16:9).
+                    </p>
                 </div>
             </div>
 

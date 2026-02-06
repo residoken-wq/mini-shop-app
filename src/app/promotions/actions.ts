@@ -44,6 +44,7 @@ export async function getPromotionById(id: string) {
 export async function createPromotion(data: {
     name: string;
     description?: string;
+    bannerUrl?: string;
     startDate: Date;
     endDate: Date;
     isActive?: boolean;
@@ -53,12 +54,13 @@ export async function createPromotion(data: {
     }[];
 }) {
     try {
-        const { name, description, startDate, endDate, isActive, products } = data;
+        const { name, description, bannerUrl, startDate, endDate, isActive, products } = data;
 
         await db.promotion.create({
             data: {
                 name,
                 description,
+                bannerUrl,
                 startDate,
                 endDate,
                 isActive: isActive ?? true,
@@ -87,6 +89,7 @@ export async function createPromotion(data: {
 export async function updatePromotion(id: string, data: {
     name: string;
     description?: string;
+    bannerUrl?: string;
     startDate: Date;
     endDate: Date;
     isActive?: boolean;
@@ -96,7 +99,7 @@ export async function updatePromotion(id: string, data: {
     }[];
 }) {
     try {
-        const { name, description, startDate, endDate, isActive, products } = data;
+        const { name, description, bannerUrl, startDate, endDate, isActive, products } = data;
 
         // Transaction to handle complex update:
         // 1. Update basic info
@@ -111,6 +114,7 @@ export async function updatePromotion(id: string, data: {
                 data: {
                     name,
                     description,
+                    bannerUrl,
                     startDate,
                     endDate,
                     isActive: isActive ?? true,

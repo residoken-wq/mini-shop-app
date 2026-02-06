@@ -48,6 +48,7 @@ export interface Promotion {
     id: string;
     name: string;
     description: string | null;
+    bannerUrl: string | null;
     startDate: Date;
     endDate: Date;
     products: PromotionProduct[];

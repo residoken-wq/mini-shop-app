@@ -260,6 +260,7 @@ model Promotion {
   id          String   @id @default(uuid())
   name        String
   description String?
+  bannerUrl   String?
   startDate   DateTime
   endDate     DateTime
   isActive    Boolean  @default(true)
