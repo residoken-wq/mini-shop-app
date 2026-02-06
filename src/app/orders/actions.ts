@@ -168,138 +168,143 @@ export async function updateOrderStatus(id: string, status: string) {
                     });
                 }
             }
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } }
-        });
+        } else if (currentOrder.type === "PURCHASE") {
+            // Case A: Becoming COMPLETED
+            if (isBecomingCompleted) {
+                // A1. Increase Stock (Purchase means adding to inventory)
+                for (const item of currentOrder.items) {
+                    await db.product.update({
+                        where: { id: item.productId },
+                        data: { stock: { increment: item.quantity } }
+                    });
 
-        await db.inventoryTransaction.create({
-            data: {
-                productId: item.productId,
-                quantity: item.quantity,
-                type: "IN",
-                note: `Purchase Order #${currentOrder.code}`
+                    await db.inventoryTransaction.create({
+                        data: {
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            type: "IN",
+                            note: `Purchase Order #${currentOrder.code}`
+                        }
+                    });
+                }
+
+                const remainingAmount = currentOrder.total - currentOrder.paid;
+
+                if (currentOrder.paymentMethod === "DEBT") {
+                    // For DEBT: Increase Supplier Debt
+                    if (currentOrder.supplierId && remainingAmount > 0) {
+                        await db.supplier.update({
+                            where: { id: currentOrder.supplierId },
+                            data: { debt: { increment: remainingAmount } }
+                        });
+                    }
+                    // If partially paid beforehand (e.g. deposit), it should have been recorded as EXPENSE already?
+                    // For now, we assume `paid` amount was handled or will be handled. 
+                    // If we want to record the "paid" portion as Expense now:
+                    if (currentOrder.paid > 0) {
+                        await db.transaction.create({
+                            data: {
+                                type: "EXPENSE",
+                                amount: currentOrder.paid,
+                                description: `Purchase Order #${currentOrder.code} - Partial Payment`,
+                                supplierId: currentOrder.supplierId,
+                                paymentMethod: "CASH" // Assumed
+                            }
+                        });
+                    }
+                } else {
+                    // For CASH/BANK/QR:
+                    // 1. Transaction for ALREADY paid amount
+                    if (currentOrder.paid > 0) {
+                        await db.transaction.create({
+                            data: {
+                                type: "EXPENSE",
+                                amount: currentOrder.paid,
+                                description: `Purchase Order #${currentOrder.code} - Pre-Payment`,
+                                supplierId: currentOrder.supplierId,
+                                paymentMethod: currentOrder.paymentMethod || "CASH"
+                            }
+                        });
+                    }
+
+                    // 2. Auto-pay the REMAINING amount (assume full payment upon completion)
+                    if (remainingAmount > 0) {
+                        await db.transaction.create({
+                            data: {
+                                type: "EXPENSE",
+                                amount: remainingAmount,
+                                description: `Purchase Order #${currentOrder.code} - Final Payment`,
+                                supplierId: currentOrder.supplierId,
+                                paymentMethod: currentOrder.paymentMethod || "CASH"
+                            }
+                        });
+
+                        // Update order to fully paid
+                        await db.order.update({
+                            where: { id },
+                            data: { paid: currentOrder.total }
+                        });
+                    }
+                }
             }
+
+            // Case B: Leaving COMPLETED (Reversal)
+            if (isLeavingCompleted) {
+                // B1. Decrease Stock (Reverse Purchase)
+                for (const item of currentOrder.items) {
+                    await db.product.update({
+                        where: { id: item.productId },
+                        data: { stock: { decrement: item.quantity } }
+                    });
+                }
+                // Delete inventory transactions
+                await db.inventoryTransaction.deleteMany({
+                    where: { note: { contains: currentOrder.code }, type: "IN" }
+                });
+
+                // B2. Reverse Debt
+                if (currentOrder.supplierId && currentOrder.paymentMethod === "DEBT") {
+                    // If we added to debt, we subtract it now.
+                    // But wait, if it was fully paid via Debt, `paid` might be 0 in Order model but Debt increased by Total.
+                    // Or `paid` is 0, Debt +Total.
+
+                    // Note: In "A2", we incremented debt by `remainingAmount`.
+                    // So we should decrement by `remainingAmount` (calculated at that time).
+                    // Best guess: user hasn't paid more since then.
+                    const debtAmount = currentOrder.total - currentOrder.paid;
+                    if (debtAmount > 0) {
+                        await db.supplier.update({
+                            where: { id: currentOrder.supplierId },
+                            data: { debt: { decrement: debtAmount } }
+                        });
+                    }
+                }
+
+                // B3. Delete Expense Transaction
+                // We created EXPENSE transactions for the paid amounts.
+                await db.transaction.deleteMany({
+                    where: {
+                        description: { contains: currentOrder.code },
+                        type: "EXPENSE"
+                    }
+                });
+            }
+        }
+
+        // 3. Update Order Status
+        await db.order.update({
+            where: { id },
+            data: { status },
         });
+
+        revalidatePath("/orders");
+        revalidatePath("/products");
+        revalidatePath("/customers");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update order status:", error);
+        return { success: false, error: "Failed to update order status" };
     }
-
-            // A2. Handle Payment & Debt
-            const remainingAmount = currentOrder.total - currentOrder.paid;
-
-    if (currentOrder.paymentMethod === "DEBT") {
-        // For DEBT: Increase Supplier Debt
-        if (currentOrder.supplierId && remainingAmount > 0) {
-            await db.supplier.update({
-                where: { id: currentOrder.supplierId },
-                data: { debt: { increment: remainingAmount } }
-            });
-        }
-        // If partially paid beforehand (e.g. deposit), it should have been recorded as EXPENSE already?
-        // For now, we assume `paid` amount was handled or will be handled. 
-        // If we want to record the "paid" portion as Expense now:
-        if (currentOrder.paid > 0) {
-            await db.transaction.create({
-                data: {
-                    type: "EXPENSE",
-                    amount: currentOrder.paid,
-                    description: `Purchase Order #${currentOrder.code} - Partial Payment`,
-                    supplierId: currentOrder.supplierId,
-                    paymentMethod: "CASH" // Assumed
-                }
-            });
-        }
-    } else {
-        // For CASH/BANK/QR:
-        // 1. Transaction for ALREADY paid amount
-        if (currentOrder.paid > 0) {
-            await db.transaction.create({
-                data: {
-                    type: "EXPENSE",
-                    amount: currentOrder.paid,
-                    description: `Purchase Order #${currentOrder.code} - Pre-Payment`,
-                    supplierId: currentOrder.supplierId,
-                    paymentMethod: currentOrder.paymentMethod || "CASH"
-                }
-            });
-        }
-
-        // 2. Auto-pay the REMAINING amount (assume full payment upon completion)
-        if (remainingAmount > 0) {
-            await db.transaction.create({
-                data: {
-                    type: "EXPENSE",
-                    amount: remainingAmount,
-                    description: `Purchase Order #${currentOrder.code} - Final Payment`,
-                    supplierId: currentOrder.supplierId,
-                    paymentMethod: currentOrder.paymentMethod || "CASH"
-                }
-            });
-
-            // Update order to fully paid
-            await db.order.update({
-                where: { id },
-                data: { paid: currentOrder.total }
-            });
-        }
-    }
-}
-
-// Case B: Leaving COMPLETED (Reversal)
-if (isLeavingCompleted) {
-    // B1. Decrease Stock (Reverse Purchase)
-    for (const item of currentOrder.items) {
-        await db.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } }
-        });
-    }
-    // Delete inventory transactions
-    await db.inventoryTransaction.deleteMany({
-        where: { note: { contains: currentOrder.code }, type: "IN" }
-    });
-
-    // B2. Reverse Debt
-    if (currentOrder.supplierId && currentOrder.paymentMethod === "DEBT") {
-        // If we added to debt, we subtract it now.
-        // But wait, if it was fully paid via Debt, `paid` might be 0 in Order model but Debt increased by Total.
-        // Or `paid` is 0, Debt +Total.
-
-        // Note: In "A2", we incremented debt by `remainingAmount`.
-        // So we should decrement by `remainingAmount` (calculated at that time).
-        // Best guess: user hasn't paid more since then.
-        const debtAmount = currentOrder.total - currentOrder.paid;
-        if (debtAmount > 0) {
-            await db.supplier.update({
-                where: { id: currentOrder.supplierId },
-                data: { debt: { decrement: debtAmount } }
-            });
-        }
-    }
-
-    // B3. Delete Expense Transaction
-    // We created EXPENSE transactions for the paid amounts.
-    await db.transaction.deleteMany({
-        where: {
-            description: { contains: currentOrder.code },
-            type: "EXPENSE"
-        }
-    });
-}
-    }
-
-// 3. Update Order Status
-await db.order.update({
-    where: { id },
-    data: { status },
-});
-
-revalidatePath("/orders");
-revalidatePath("/products");
-revalidatePath("/customers");
-return { success: true };
-} catch (error) {
-    console.error("Failed to update order status:", error);
-    return { success: false, error: "Failed to update order status" };
-}
 }
 
 export async function updateOrderPaymentMethod(id: string, paymentMethod: string) {
