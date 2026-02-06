@@ -5,7 +5,7 @@ import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Product, CartItem, CustomerType, Customer, Promotion, PendingOrder } from "../../types";
 import { CustomerInfoBanner } from "./CustomerInfoBanner";
-import { PromotionBanner } from "./PromotionBanner";
+import { PromotionBanner, PromotionImages } from "./PromotionBanner";
 import { PendingOrdersSection } from "./PendingOrdersSection";
 import { ProductCard } from "./ProductCard";
 import { BottomCartBar } from "./BottomCartBar";
@@ -104,6 +104,9 @@ export function ProductSelection({
 
     return (
         <div className="space-y-4">
+            {/* Promotion Images (Top) */}
+            <PromotionImages promotions={promotions} />
+
             {/* Customer Info Banner */}
             <CustomerInfoBanner
                 customerType={customerType}
