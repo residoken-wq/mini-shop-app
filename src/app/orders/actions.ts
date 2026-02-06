@@ -966,7 +966,8 @@ export async function addOrderPayment(data: {
 
         const newPaid = (order.paid || 0) + data.amount;
 
-        if (newPaid > order.total) {
+        // Allow for small floating point discrepancies (e.g. 1 dong)
+        if (newPaid > order.total + 1) {
             return { success: false, error: "Số tiền thanh toán vượt quá tổng giá trị đơn hàng" };
         }
 
