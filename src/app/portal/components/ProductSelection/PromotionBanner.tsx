@@ -35,19 +35,19 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
             <div className="space-y-2">
                 {promotions.map((promo) => (
                     <div key={promo.id} className="bg-white/60 rounded-lg p-3">
+                        {promo.bannerUrl && (
+                            <div className="relative w-full aspect-[3/1] md:aspect-[4/1] overflow-hidden rounded-lg mb-3">
+                                <img
+                                    src={getBannerUrl(promo.bannerUrl)}
+                                    alt={promo.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
                         <div className="flex items-start gap-2">
-                            <Percent className="w-4 h-4 text-orange-500 mt-0.5" />
+                            <Percent className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
                             <div className="flex-1">
                                 <p className="font-medium text-gray-800">{promo.name}</p>
-                                {promo.bannerUrl && (
-                                    <div className="relative w-full aspect-[3/1] md:aspect-[4/1] overflow-hidden rounded-lg mb-2 mt-2">
-                                        <img
-                                            src={getBannerUrl(promo.bannerUrl)}
-                                            alt={promo.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                )}
                                 {promo.description && (
                                     <div
                                         className="text-sm text-gray-600 prose prose-sm max-w-none [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
