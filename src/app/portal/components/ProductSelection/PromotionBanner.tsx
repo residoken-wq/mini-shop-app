@@ -76,39 +76,42 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
             </div>
             <div className="space-y-2">
                 {promotions.map((promo) => (
-                    <div key={promo.id} className="bg-white/60 rounded-lg p-3">
-                        <div key={promo.id} className="bg-white/60 rounded-lg p-3">
-                            <div className="flex items-start gap-2">
-                                <Percent className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-800">{promo.name}</p>
-                                    {promo.description && (
-                                        <div
-                                            className="text-sm text-gray-600 prose prose-sm max-w-none [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
-                                            dangerouslySetInnerHTML={{ __html: promo.description }}
-                                        />
-                                    )}
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
-                                    </p>
-                                </div>
-                            </div>
-                            {/* Show promotional products */}
-                            <div className="mt-2 flex flex-wrap gap-2">
-                                {promo.products.slice(0, 3).map((pp) => (
-                                    <div key={pp.productId} className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
-                                        <span className="font-medium">{pp.productName}</span>
-                                    </div>
-                                ))}
-                                {promo.products.length > 3 && (
-                                    <span className="text-xs text-amber-600">
-                                        +{promo.products.length - 3} sản phẩm khác
-                                    </span>
-                                )}
-                            </div>
+                    <div className="flex items-start gap-2">
+                        <Percent className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                            <p className="font-medium text-gray-800">{promo.name}</p>
+                            {promo.description && (
+                                <div
+                                    className="text-sm text-gray-600 prose prose-sm max-w-none [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
+                                    dangerouslySetInnerHTML={{ __html: promo.description }}
+                                />
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">
+                                Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
+                            </p>
                         </div>
-                ))}
                     </div>
+                            {/* Show promotional products */ }
+                    < div className = "mt-2 flex flex-wrap gap-2" >
+                    {
+                        promo.products.slice(0, 3).map((pp) => (
+                            <div key={pp.productId} className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+                                <span className="font-medium">{pp.productName}</span>
+                            </div>
+                        ))
+                    }
+                                {
+                        promo.products.length > 3 && (
+                            <span className="text-xs text-amber-600">
+                                +{promo.products.length - 3} sản phẩm khác
+                            </span>
+                        )
+                    }
+                            </div>
         </div>
-            );
+    ))
+}
+            </div >
+        </div >
+    );
 }
