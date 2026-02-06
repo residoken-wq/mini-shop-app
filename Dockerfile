@@ -53,8 +53,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 
-# Generate Prisma client for this specific platform
-RUN npx prisma generate
+
 
 # Create data directory
 RUN mkdir -p /app/data
