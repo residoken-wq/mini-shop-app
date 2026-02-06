@@ -134,6 +134,23 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
         }));
     };
 
+    const getBannerPreviewUrl = (url: string) => {
+        if (!url) return null;
+        try {
+            // Handle Google Drive links
+            if (url.includes('drive.google.com')) {
+                const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (idMatch && idMatch[1]) {
+                    // Use thumbnail link for better performance/reliability or uc for direct
+                    return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1200`;
+                }
+            }
+            return url;
+        } catch (e) {
+            return url;
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -267,6 +284,22 @@ export function PromotionForm({ initialData, products }: PromotionFormProps) {
                     <p className="text-xs text-muted-foreground text-orange-600">
                         * Kích thước file nhỏ hơn 3MB. Ưu tiên tỉ lệ tương thích mobile (ví dụ 3:1 hoặc 16:9).
                     </p>
+                    {bannerUrl && (
+                        <div className="mt-2 relative w-full aspect-[3/1] bg-gray-100 rounded-lg overflow-hidden border">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={getBannerPreviewUrl(bannerUrl) || bannerUrl}
+                                alt="Banner Preview"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                            />
+                            <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 text-xs rounded">
+                                Preview
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

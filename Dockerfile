@@ -8,14 +8,11 @@ RUN apt-get update && apt-get install -y openssl libssl-dev ca-certificates && r
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
-# Delete lock file to force fresh install with correct versions
-RUN rm -f package-lock.json
-
-# Force install to ignore local lockfile mismatches
-RUN npm install
+# Install dependencies using clean install for speed and consistency
+RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -45,6 +42,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 # Install OpenSSL for Prisma (Bullseye has OpenSSL 1.1)
 RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
+# Install prisma globally to cache this layer
+RUN npm install -g prisma@5.22.0
+
 COPY --from=builder /app/public ./public
 RUN mkdir .next
 
@@ -52,9 +52,6 @@ RUN mkdir .next
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-
-# Install prisma globally or locally to ensure 'npx prisma' works without downloading
-RUN npm install prisma @prisma/client
 
 # Generate Prisma client for this specific platform
 RUN npx prisma generate

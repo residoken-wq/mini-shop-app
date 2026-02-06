@@ -10,6 +10,22 @@ interface PromotionBannerProps {
 export function PromotionBanner({ promotions }: PromotionBannerProps) {
     if (promotions.length === 0) return null;
 
+    const getBannerUrl = (url: string | null) => {
+        if (!url) return undefined;
+        try {
+            // Handle Google Drive links
+            if (url.includes('drive.google.com')) {
+                const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (idMatch && idMatch[1]) {
+                    return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1200`;
+                }
+            }
+            return url;
+        } catch (e) {
+            return url;
+        }
+    };
+
     return (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2 text-amber-700">
@@ -26,7 +42,7 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
                                 {promo.bannerUrl && (
                                     <div className="relative w-full aspect-[3/1] md:aspect-[4/1] overflow-hidden rounded-lg mb-2 mt-2">
                                         <img
-                                            src={promo.bannerUrl}
+                                            src={getBannerUrl(promo.bannerUrl)}
                                             alt={promo.name}
                                             className="w-full h-full object-cover"
                                         />
