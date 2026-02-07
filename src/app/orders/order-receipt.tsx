@@ -330,27 +330,30 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             <p className="font-medium text-gray-700">Số tiền: {formatCurrency(amountDue > 0 ? amountDue : grandTotal)}</p>
                             <p>Nội dung: {order.code}</p>
                         </div>
-                        {/* Bank info fallback if no QR available */}
-                        {paymentMethod === "BANK" && !vietQRUrl && shopSettings?.bankAccount && (
-                            <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
-                                <div className="text-center bg-blue-50 p-3 rounded-lg">
-                                    <p className="text-sm font-medium text-gray-700 mb-1">Thông tin chuyển khoản</p>
-                                    <p className="text-sm">{shopSettings?.bankName}</p>
-                                    <p className="text-lg font-bold text-blue-600">{shopSettings?.bankAccount}</p>
-                                    <p className="text-sm">{shopSettings?.bankOwner}</p>
-                                    <p className="text-sm mt-1 font-medium">Nội dung: {order.code}</p>
-                                </div>
-                            </div>
-                        )}
+                    </div>
+                )}
 
-                        {/* Footer */}
-                        <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-200">
-                            <p className="text-sm text-gray-500">Cảm ơn quý khách!</p>
-                            <p className="text-xs text-gray-400 mt-1">Hẹn gặp lại ❤️</p>
+                {/* Bank info fallback if no QR available */}
+                {paymentMethod === "BANK" && !vietQRUrl && shopSettings?.bankAccount && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                        <div className="text-center bg-blue-50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-gray-700 mb-1">Thông tin chuyển khoản</p>
+                            <p className="text-sm">{shopSettings?.bankName}</p>
+                            <p className="text-lg font-bold text-blue-600">{shopSettings?.bankAccount}</p>
+                            <p className="text-sm">{shopSettings?.bankOwner}</p>
+                            <p className="text-sm mt-1 font-medium">Nội dung: {order.code}</p>
                         </div>
                     </div>
-                );
-    }
-                );
+                )}
 
-                OrderReceipt.displayName = "OrderReceipt";
+                {/* Footer */}
+                <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-200">
+                    <p className="text-sm text-gray-500">Cảm ơn quý khách!</p>
+                    <p className="text-xs text-gray-400 mt-1">Hẹn gặp lại ❤️</p>
+                </div>
+            </div>
+        );
+    }
+);
+
+OrderReceipt.displayName = "OrderReceipt";
