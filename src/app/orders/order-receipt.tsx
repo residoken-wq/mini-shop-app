@@ -314,21 +314,30 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 )}
 
                 {/* VietQR Code - Only show for bank transfer */}
+                {/* VietQR Code - Only show for bank transfer */}
                 {paymentMethod === "BANK" && vietQRUrl && (
-                    <div className="text-center mt-2">
-                        <p className={`font-medium text-gray-700 mb-1 ${isA5 ? "text-xs" : "text-sm"}`}>Quét mã để thanh toán</p>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={vietQRUrl}
-                            alt="VietQR Payment"
-                            className="mx-auto rounded-lg border border-gray-200"
-                            style={{ maxWidth: isA5 ? "120px" : "150px" }}
-                        />
-                        <div className={`mt-1 text-gray-500 ${isA5 ? "text-[10px]" : "text-xs"}`}>
-                            <p>{shopSettings?.bankName} - {shopSettings?.bankAccount}</p>
-                            <p>{shopSettings?.bankOwner}</p>
-                            <p className="font-medium text-gray-700">Số tiền: {formatCurrency(amountDue > 0 ? amountDue : grandTotal)}</p>
-                            <p>Nội dung: {order.code}</p>
+                    <div className={`mt-2 ${isA5 ? "flex items-start gap-3 border-t border-gray-800 pt-2" : "text-center"}`}>
+                        <div className={isA5 ? "shrink-0" : ""}>
+                            <p className={`font-medium text-gray-700 mb-1 ${isA5 ? "hidden" : "text-sm"}`}>Quét mã để thanh toán</p>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={vietQRUrl}
+                                alt="VietQR Payment"
+                                className={`rounded-lg border border-gray-200 ${isA5 ? "" : "mx-auto"}`}
+                                style={{ maxWidth: isA5 ? "100px" : "150px" }}
+                            />
+                        </div>
+                        <div className={isA5 ? "flex-1 text-left" : "mt-2 text-xs text-gray-500"}>
+                            {isA5 && <p className="font-bold text-xs mb-1">QUÉT MÃ THANH TOÁN</p>}
+                            <div className={isA5 ? "text-[10px] space-y-0.5" : ""}>
+                                <p><span className={isA5 ? "font-semibold" : ""}>Ngân hàng:</span> {shopSettings?.bankName}</p>
+                                <p><span className={isA5 ? "font-semibold" : ""}>STK:</span> <span className="font-bold text-blue-600">{shopSettings?.bankAccount}</span></p>
+                                <p><span className={isA5 ? "font-semibold" : ""}>Chủ TK:</span> {shopSettings?.bankOwner}</p>
+                                <p className={isA5 ? "" : "font-medium text-gray-700"}>
+                                    <span className={isA5 ? "font-semibold" : ""}>Số tiền:</span> {formatCurrency(amountDue > 0 ? amountDue : grandTotal)}
+                                </p>
+                                <p><span className={isA5 ? "font-semibold" : ""}>Nội dung:</span> {order.code}</p>
+                            </div>
                         </div>
                     </div>
                 )}
