@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle, Edit, ChevronLeft, Calendar, MessageSquare } from "lucide-react";
+import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle, Edit, ChevronLeft, Calendar, MessageSquare, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { deleteOrder, updateOrderStatus, getOrders, addOrderPayment } from "./actions";
 import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-constants";
 import { OrderReceipt } from "./order-receipt";
 import { OrderEditableItems } from "./order-editable-items";
+import { printContent } from "@/lib/print-utils";
 import { PendingOrdersPreparation } from "./pending-orders-preparation";
 import { ShippingOrdersList } from "./shipping-orders-list";
 import { ShippingDialog } from "./shipping-dialog";
@@ -653,150 +654,582 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                     </div>
                                 )}
 
-                                {/* View Mode Tabs */}
-                                <div className="flex gap-2 border-b pb-2 mt-4">
-                                    <Button
-                                        size="sm"
-                                        variant={viewMode === "receipt" ? "default" : "outline"}
-                                        onClick={() => setViewMode("receipt")}
-                                    >
-                                        📄 Xem hóa đơn
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant={viewMode === "edit" ? "default" : "outline"}
-                                        onClick={() => setViewMode("edit")}
-                                    >
-                                        <Edit className="w-4 h-4 mr-1" />
-                                        Chỉnh sửa
-                                    </Button>
-                                    {/* Debug Button */}
-                                    {/* <button onClick={() => console.log(selectedOrder)}>Log Order</button> */}
-                                </div>
+                                import {printContent} from "@/lib/print-utils";
+                                import {Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle, Edit, ChevronLeft, Calendar, MessageSquare, Printer} from "lucide-react";
+                                import {useRef, useState, useEffect, useCallback} from "react";
+                                import {useToast} from "@/components/ui/use-toast";
+                                import {
+                                    Dialog,
+                                    DialogContent,
+                                    DialogFooter,
+                                    DialogHeader,
+                                    DialogTitle,
+} from "@/components/ui/dialog";
+                                import {Button} from "@/components/ui/button";
+                                import {Input} from "@/components/ui/input";
+                                import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
+                                import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+                                import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
+                                import {cn} from "@/lib/utils";
+                                import {OrderReceipt} from "./order-receipt";
+                                import {OrderEditableItems} from "./order-editable-items";
+                                import {ShippingDialog} from "./shipping-dialog";
+                                import {DeliveryDialog} from "./delivery-dialog";
+                                import {
+                                    getAllOrders,
+                                    deleteOrder,
+                                    updateOrderStatus,
+                                    addPaymentToOrder,
+                                    Order,
+                                    OrderStatus,
+                                    ORDER_STATUSES,
+                                    getAllowedNextStatuses,
+                                    OrderType,
+                                    OrderWithDetails
+                                } from "@/lib/api/orders";
+                                import {ShopSettings} from "@/lib/api/shop-settings";
+                                import {getStatusBadge} from "@/components/order-status-badge";
+                                import {format} from "date-fns";
+                                import {vi} from "date-fns/locale";
 
-                                {/* Content based on view mode */}
-                                {viewMode === "receipt" ? (
-                                    <div className="border rounded-lg overflow-hidden shadow-sm">
-                                        <OrderReceipt ref={receiptRef} order={selectedOrder} shopSettings={shopSettings} />
+                                interface OrdersClientProps {
+                                    initialOrders: OrderWithDetails[];
+                                expensesTotal: number;
+                                shopSettings: ShopSettings;
+}
+
+                                export function OrdersClient({initialOrders, expensesTotal, shopSettings}: OrdersClientProps) {
+    const [orders, setOrders] = useState<OrderWithDetails[]>(initialOrders);
+                                const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
+                                const [viewMode, setViewMode] = useState<"receipt" | "edit">("receipt");
+                                const [isPrinting, setIsPrinting] = useState(false);
+                                const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+                                const [paymentAmount, setPaymentAmount] = useState(0);
+                                const [paymentMethod, setPaymentMethod] = useState("CASH");
+                                const [paymentNote, setPaymentNote] = useState("");
+                                const [showShippingDialog, setShowShippingDialog] = useState(false);
+                                const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
+                                const [receiptFormat, setReceiptFormat] = useState<"thermal" | "a5">("thermal");
+
+                                const receiptRef = useRef<HTMLDivElement>(null);
+                                    const {toast} = useToast();
+
+                                    const [currentPage, setCurrentPage] = useState(1);
+                                    const ordersPerPage = 10;
+                                    const totalPages = Math.ceil(orders.length / ordersPerPage);
+
+                                    const currentOrders = orders.slice(
+                                    (currentPage - 1) * ordersPerPage,
+                                    currentPage * ordersPerPage
+                                    );
+
+    const refreshOrders = useCallback(async () => {
+        const updatedOrders = await getAllOrders();
+                                    setOrders(updatedOrders);
+                                    if (selectedOrder) {
+            const updatedSelectedOrder = updatedOrders.find(o => o.id === selectedOrder.id);
+                                    setSelectedOrder(updatedSelectedOrder || null);
+        }
+    }, [selectedOrder]);
+
+    const handleDelete = async (orderId: string) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa đơn hàng này?")) {
+            try {
+                                        await deleteOrder(orderId);
+                setOrders(prev => prev.filter(order => order.id !== orderId));
+                                    toast({
+                                        title: "Thành công",
+                                    description: "Đơn hàng đã được xóa.",
+                });
+            } catch (error) {
+                                        toast({
+                                            title: "Lỗi",
+                                            description: "Không thể xóa đơn hàng.",
+                                            variant: "destructive",
+                                        });
+            }
+        }
+    };
+
+    const handlePrintOrder = async () => {
+        if (!receiptRef.current) return;
+
+                                    setIsPrinting(true);
+                                    try {
+            const html2canvas = (await import('html2canvas')).default;
+                                    const canvas = await html2canvas(receiptRef.current, {
+                                        scale: 2, // Increase scale for better resolution
+                                    useCORS: true, // Important for images from external sources
+                                    allowTaint: true, // Allow tainting the canvas
+            });
+                                    const image = canvas.toDataURL("image/png");
+
+                                    const link = document.createElement("a");
+                                    link.href = image;
+                                    link.download = `hoa-don-${selectedOrder?.code || 'don-hang'}.png`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+        } catch (error) {
+                                        console.error("Error generating receipt image:", error);
+                                    toast({
+                                        title: "Lỗi",
+                                    description: "Không thể tạo ảnh hóa đơn.",
+                                    variant: "destructive",
+            });
+        } finally {
+                                        setIsPrinting(false);
+        }
+    };
+
+    const handlePrintImmediate = () => {
+        if (!receiptRef.current) return;
+                                    printContent(receiptRef.current);
+    };
+
+    const handleAddPayment = async () => {
+        if (!selectedOrder) return;
+
+                                    try {
+            const result = await addPaymentToOrder(selectedOrder.id, {
+                                        amount: paymentAmount,
+                                    method: paymentMethod,
+                                    note: paymentNote,
+            });
+
+                                    if (result.success) {
+                                        toast({
+                                            title: "Thành công",
+                                            description: "Thanh toán đã được thêm.",
+                                        });
+                                    setShowPaymentDialog(false);
+                                    setPaymentAmount(0);
+                                    setPaymentMethod("CASH");
+                                    setPaymentNote("");
+                                    refreshOrders();
+            } else {
+                                        toast({
+                                            title: "Lỗi",
+                                            description: result.message || "Không thể thêm thanh toán.",
+                                            variant: "destructive",
+                                        });
+            }
+        } catch (error) {
+                                        console.error("Error adding payment:", error);
+                                    toast({
+                                        title: "Lỗi",
+                                    description: "Đã xảy ra lỗi khi thêm thanh toán.",
+                                    variant: "destructive",
+            });
+        }
+    };
+
+                                    return (
+                                    <div className="p-4 md:p-6">
+                                        <Tabs defaultValue="all">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <TabsList>
+                                                    <TabsTrigger value="all">Tất cả đơn hàng</TabsTrigger>
+                                                    <TabsTrigger value="sale">Đơn bán</TabsTrigger>
+                                                    <TabsTrigger value="purchase">Đơn nhập</TabsTrigger>
+                                                </TabsList>
+                                                <Button>Tạo đơn hàng mới</Button>
+                                            </div>
+
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Danh sách đơn hàng</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    {orders.length === 0 ? (
+                                                        <p className="text-center text-muted-foreground">Không có đơn hàng nào.</p>
+                                                    ) : (
+                                                        <Table>
+                                                            <TableHeader>
+                                                                <TableRow>
+                                                                    <TableHead>Mã ĐH</TableHead>
+                                                                    <TableHead>Khách hàng</TableHead>
+                                                                    <TableHead>Lợi nhuận</TableHead>
+                                                                    <TableHead className="text-right">Tổng tiền</TableHead>
+                                                                    <TableHead>Trạng thái</TableHead>
+                                                                    <TableHead>Ngày tạo</TableHead>
+                                                                    <TableHead>Hành động</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {currentOrders.map((order) => {
+                                                                    const profit = order.type === "SALE"
+                                                                        ? order.items.reduce((sum, item) => sum + (item.price - item.costPrice) * item.quantity, 0)
+                                                                        : order.items.reduce((sum, item) => sum - (item.price - item.costPrice) * item.quantity, 0);
+                                                                    return (
+                                                                        <TableRow key={order.id}>
+                                                                            <TableCell className="font-medium">{order.code}</TableCell>
+                                                                            <TableCell>{order.recipientName}</TableCell>
+                                                                            <TableCell>
+                                                                                {order.type === "SALE" ? (
+                                                                                    <span className={cn("font-medium", profit >= 0 ? "text-green-600" : "text-red-600")}>
+                                                                                        {new Intl.NumberFormat('vi-VN').format(profit)}
+                                                                                    </span>
+                                                                                ) : "-"}
+                                                                            </TableCell>
+                                                                            <TableCell className="text-right font-bold">
+                                                                                {new Intl.NumberFormat('vi-VN').format(order.total)} đ
+                                                                            </TableCell>
+                                                                            <TableCell>{getStatusBadge(order.status)}</TableCell>
+                                                                            <TableCell className="text-muted-foreground text-sm">
+                                                                                {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                                                                            </TableCell>
+                                                                            <TableCell>
+                                                                                <div className="flex gap-1">
+                                                                                    <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
+                                                                                        <Eye className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(order.id)}>
+                                                                                        <Trash2 className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    );
+                                                                })}
+                                                            </TableBody>
+                                                        </Table>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+
+                                            {/* Pagination Controls */}
+                                            {totalPages > 1 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        Trang {currentPage} / {totalPages}
+                                                    </span>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                            disabled={currentPage === 1}
+                                                        >
+                                                            <ChevronLeft className="h-4 w-4 mr-1" />
+                                                            Trước
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                            disabled={currentPage === totalPages}
+                                                        >
+                                                            Sau
+                                                            <ChevronRight className="h-4 w-4 ml-1" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Order Detail Dialog */}
+                                            <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+                                                <DialogContent className="max-w-md md:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                                                    <DialogHeader className="shrink-0">
+                                                        <DialogTitle className="flex items-center justify-between pr-8">
+                                                            <span>Chi tiết đơn hàng #{selectedOrder?.code}</span>
+                                                            {selectedOrder && getStatusBadge(selectedOrder.status)}
+                                                        </DialogTitle>
+                                                    </DialogHeader>
+                                                    {selectedOrder && (
+                                                        <div className="flex-1 overflow-y-auto space-y-4">
+                                                            {selectedOrder && (
+                                                                <div className="bg-gray-50 rounded-lg p-4">
+                                                                    <p className="text-sm font-medium text-gray-600 mb-3">Tiến trình xử lý</p>
+                                                                    <div className="flex items-center justify-between">
+                                                                        {(["PENDING", "PROCESSING", "READY", "SHIPPING", "COMPLETED"] as const).map((status, idx) => {
+                                                                            const statusInfo = ORDER_STATUSES[status];
+                                                                            const currentStep = ORDER_STATUSES[selectedOrder.status as OrderStatus]?.step || 0;
+                                                                            const isActive = statusInfo.step <= currentStep;
+                                                                            const isCurrent = selectedOrder.status === status;
+                                                                            const isCancelled = selectedOrder.status === "CANCELLED";
+
+                                                                            return (
+                                                                                <div key={status} className="flex items-center">
+                                                                                    <div className={cn(
+                                                                                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all",
+                                                                                        isCancelled ? "bg-gray-200 text-gray-400" :
+                                                                                            isCurrent ? "bg-purple-500 text-white ring-4 ring-purple-200" :
+                                                                                                isActive ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
+                                                                                    )}>
+                                                                                        {isActive && !isCancelled ? <CheckCircle className="w-4 h-4" /> : idx + 1}
+                                                                                    </div>
+                                                                                    {idx < 4 && (
+                                                                                        <div className={cn(
+                                                                                            "w-8 md:w-12 h-1 mx-1",
+                                                                                            !isCancelled && statusInfo.step < currentStep ? "bg-green-500" : "bg-gray-200"
+                                                                                        )} />
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                    <div className="flex justify-between mt-2 text-[10px] md:text-xs text-gray-500">
+                                                                        <span>Chờ</span>
+                                                                        <span>Xử lý</span>
+                                                                        <span>Đủ hàng</span>
+                                                                        <span>{selectedOrder.type === "PURCHASE" ? "Vận chuyển" : "Giao"}</span>
+                                                                        <span>Xong</span>
+                                                                    </div>
+
+                                                                    {/* Status Change Buttons */}
+                                                                    {selectedOrder.status !== "COMPLETED" && selectedOrder.status !== "CANCELLED" && (
+                                                                        <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
+                                                                            <span className="text-sm text-gray-500 mr-2">Chuyển sang:</span>
+                                                                            {getAllowedNextStatuses(selectedOrder.status).map(nextStatus => {
+                                                                                // For READY -> SHIPPING, open shipping dialog (Only for SALE?)
+                                                                                // For PURCHASE, maybe we skip shipping dialog or treat it simply?
+                                                                                // Let's allow simple transition for now.
+                                                                                if (selectedOrder.type === "SALE" && selectedOrder.status === "READY" && nextStatus === "SHIPPING") {
+                                                                                    return (
+                                                                                        <Button
+                                                                                            key={nextStatus}
+                                                                                            size="sm"
+                                                                                            className="bg-orange-600 hover:bg-orange-700"
+                                                                                            onClick={() => setShowShippingDialog(true)}
+                                                                                        >
+                                                                                            <Truck className="w-4 h-4 mr-1" />
+                                                                                            Giao hàng
+                                                                                            <ChevronRight className="w-4 h-4 ml-1" />
+                                                                                        </Button>
+                                                                                    );
+                                                                                }
+                                                                                // For SHIPPING -> COMPLETED, open delivery dialog (Only for SALE?)
+                                                                                if (selectedOrder.type === "SALE" && selectedOrder.status === "SHIPPING" && nextStatus === "COMPLETED") {
+                                                                                    return (
+                                                                                        <Button
+                                                                                            key={nextStatus}
+                                                                                            size="sm"
+                                                                                            className="bg-green-600 hover:bg-green-700"
+                                                                                            onClick={() => setShowDeliveryDialog(true)}
+                                                                                        >
+                                                                                            <CheckCircle className="w-4 h-4 mr-1" />
+                                                                                            Hoàn tất
+                                                                                            <ChevronRight className="w-4 h-4 ml-1" />
+                                                                                        </Button>
+                                                                                    );
+                                                                                }
+
+                                                                                // For PURCHASE, allow direct transition
+                                                                                // Maybe rename "Giao hàng" to "Đang về" for Purchase?
+
+                                                                                return (
+                                                                                    <Button
+                                                                                        key={nextStatus}
+                                                                                        size="sm"
+                                                                                        variant={nextStatus === "CANCELLED" ? "destructive" : "default"}
+                                                                                        onClick={async () => {
+                                                                                            const result = await updateOrderStatus(selectedOrder.id, nextStatus);
+                                                                                            if (result.success) {
+                                                                                                setOrders(prev => prev.map(o =>
+                                                                                                    o.id === selectedOrder.id ? { ...o, status: nextStatus } : o
+                                                                                                ));
+                                                                                                setSelectedOrder({ ...selectedOrder, status: nextStatus });
+                                                                                            } else {
+                                                                                                alert("Lỗi cập nhật trạng thái");
+                                                                                            }
+                                                                                        }}
+                                                                                    >
+                                                                                        {ORDER_STATUSES[nextStatus].label}
+                                                                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                                                                    </Button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Manual Payment Button */}
+                                                            {selectedOrder.status === "COMPLETED" && (selectedOrder as any).paid < selectedOrder.total && (
+                                                                <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mt-4 flex items-center justify-between">
+                                                                    <div>
+                                                                        <p className="text-sm font-medium text-orange-800">Thanh toán chưa đủ</p>
+                                                                        <p className="text-xs text-orange-600">
+                                                                            Đã thanh toán: {new Intl.NumberFormat('vi-VN').format((selectedOrder as any).paid || 0)} / {new Intl.NumberFormat('vi-VN').format(selectedOrder.total)}
+                                                                        </p>
+                                                                    </div>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            setPaymentAmount(selectedOrder.total - ((selectedOrder as any).paid || 0));
+                                                                            setShowPaymentDialog(true);
+                                                                        }}
+                                                                        className="bg-orange-600 hover:bg-orange-700"
+                                                                    >
+                                                                        Thêm thanh toán
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+
+                                                            {/* View Mode Tabs */}
+                                                            <div className="flex gap-2 border-b pb-2 mt-4 items-center justify-between">
+                                                                <div className="flex gap-2">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant={viewMode === "receipt" ? "default" : "outline"}
+                                                                        onClick={() => setViewMode("receipt")}
+                                                                    >
+                                                                        📄 Xem hóa đơn
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant={viewMode === "edit" ? "default" : "outline"}
+                                                                        onClick={() => setViewMode("edit")}
+                                                                    >
+                                                                        <Edit className="w-4 h-4 mr-1" />
+                                                                        Chỉnh sửa
+                                                                    </Button>
+                                                                </div>
+
+                                                                {/* Format Selection (Only visible in receipt mode) */}
+                                                                {viewMode === "receipt" && (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-sm text-gray-500">Khổ giấy:</span>
+                                                                        <select
+                                                                            className="h-8 text-sm border rounded px-2"
+                                                                            value={receiptFormat}
+                                                                            onChange={(e) => setReceiptFormat(e.target.value as "thermal" | "a5")}
+                                                                        >
+                                                                            <option value="thermal">Hóa đơn (K80)</option>
+                                                                            <option value="a5">Hóa đơn (A5)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Content based on view mode */}
+                                                            {viewMode === "receipt" ? (
+                                                                <div className="border rounded-lg overflow-hidden shadow-sm flex justify-center bg-gray-100 p-4">
+                                                                    <OrderReceipt ref={receiptRef} order={selectedOrder} shopSettings={shopSettings} format={receiptFormat} />
+                                                                </div>
+                                                            ) : (
+                                                                <OrderEditableItems
+                                                                    orderId={selectedOrder.id}
+                                                                    items={selectedOrder.items}
+                                                                    discount={(selectedOrder as any).discount || 0}
+                                                                    shippingFee={selectedOrder.shippingFee || 0}
+                                                                    carrierName={selectedOrder.carrierName || undefined}
+                                                                    type={selectedOrder.type as "SALE" | "PURCHASE"}
+                                                                    status={selectedOrder.status}
+                                                                    paymentMethod={selectedOrder.paymentMethod || "COD"}
+                                                                    onUpdate={refreshOrders}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {/* Print Button Fixed at Bottom */}
+                                                    <div className="shrink-0 pt-4 border-t flex justify-end gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={handlePrintOrder} // Original html2canvas download
+                                                            disabled={isPrinting || viewMode !== "receipt"}
+                                                        >
+                                                            {isPrinting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                                                            Tải ảnh
+                                                        </Button>
+
+                                                        <Button
+                                                            onClick={handlePrintImmediate}
+                                                            disabled={viewMode !== "receipt"}
+                                                        >
+                                                            <Printer className="w-4 h-4 mr-2" />
+                                                            In ngay
+                                                        </Button>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
+
+                                            {/* Payment Dialog */}
+                                            <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+                                                <DialogContent className="max-w-sm">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Thêm thanh toán</DialogTitle>
+                                                    </DialogHeader>
+                                                    <div className="space-y-4 py-4">
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-medium">Số tiền</label>
+                                                            <Input
+                                                                type="number"
+                                                                value={paymentAmount}
+                                                                onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-medium">Hình thức</label>
+                                                            <select
+                                                                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                                                value={paymentMethod}
+                                                                onChange={(e) => setPaymentMethod(e.target.value)}
+                                                            >
+                                                                <option value="CASH">Tiền mặt</option>
+                                                                <option value="QR">Chuyển khoản</option>
+                                                                <option value="COD">Thu hộ (COD)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-medium">Ghi chú</label>
+                                                            <Input
+                                                                value={paymentNote}
+                                                                onChange={(e) => setPaymentNote(e.target.value)}
+                                                                placeholder="Ghi chú thanh toán..."
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Hủy</Button>
+                                                        <Button onClick={handleAddPayment}>Xác nhận</Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+
+                                            {/* Shipping Dialog */}
+                                            {selectedOrder && (
+                                                <ShippingDialog
+                                                    open={showShippingDialog}
+                                                    onClose={() => setShowShippingDialog(false)}
+                                                    order={{
+                                                        id: selectedOrder.id,
+                                                        code: selectedOrder.code,
+                                                        recipientName: selectedOrder.recipientName,
+                                                        recipientPhone: selectedOrder.recipientPhone,
+                                                        deliveryAddress: selectedOrder.deliveryAddress,
+                                                        total: selectedOrder.total
+                                                    }}
+                                                    onSuccess={refreshOrders}
+                                                />
+                                            )}
+
+                                            {/* Delivery Dialog */}
+                                            {selectedOrder && (
+                                                <DeliveryDialog
+                                                    open={showDeliveryDialog}
+                                                    onClose={() => setShowDeliveryDialog(false)}
+                                                    order={{
+                                                        id: selectedOrder.id,
+                                                        code: selectedOrder.code,
+                                                        total: selectedOrder.total,
+                                                        paymentMethod: selectedOrder.paymentMethod,
+                                                        shippingFee: selectedOrder.shippingFee,
+                                                        shippingPaidBy: selectedOrder.shippingPaidBy,
+                                                        items: selectedOrder.items.map(item => ({
+                                                            id: item.id,
+                                                            productName: item.product.name,
+                                                            sku: item.product.sku,
+                                                            quantity: item.quantity,
+                                                            price: item.price,
+                                                            unit: item.product.unit
+                                                        }))
+                                                    }}
+                                                    onSuccess={refreshOrders}
+                                                />
+                                            )}
+                                        </Tabs>
                                     </div>
-                                ) : (
-                                    <OrderEditableItems
-                                        orderId={selectedOrder.id}
-                                        items={selectedOrder.items}
-                                        discount={(selectedOrder as any).discount || 0}
-                                        shippingFee={selectedOrder.shippingFee || 0}
-                                        carrierName={selectedOrder.carrierName || undefined}
-                                        type={selectedOrder.type as "SALE" | "PURCHASE"}
-                                        status={selectedOrder.status}
-                                        paymentMethod={selectedOrder.paymentMethod || "COD"}
-                                        onUpdate={refreshOrders}
-                                    />
-                                )}
-                            </div>
-                        )}
-                        {/* Print Button Fixed at Bottom */}
-                        <div className="shrink-0 pt-4 border-t">
-                            <Button
-                                onClick={handlePrintOrder}
-                                disabled={isPrinting}
-                                className="w-full h-12 text-lg"
-                            >
-                                {isPrinting ? (
-                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                ) : (
-                                    <Download className="mr-2 h-5 w-5" />
-                                )}
-                                {isPrinting ? "Đang tạo hình ảnh..." : "Tải hình ảnh hóa đơn"}
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Payment Dialog */}
-                <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-                    <DialogContent className="max-w-sm">
-                        <DialogHeader>
-                            <DialogTitle>Thêm thanh toán</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Số tiền</label>
-                                <Input
-                                    type="number"
-                                    value={paymentAmount}
-                                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Hình thức</label>
-                                <select
-                                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                >
-                                    <option value="CASH">Tiền mặt</option>
-                                    <option value="QR">Chuyển khoản</option>
-                                    <option value="COD">Thu hộ (COD)</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Ghi chú</label>
-                                <Input
-                                    value={paymentNote}
-                                    onChange={(e) => setPaymentNote(e.target.value)}
-                                    placeholder="Ghi chú thanh toán..."
-                                />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Hủy</Button>
-                            <Button onClick={handleAddPayment}>Xác nhận</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Shipping Dialog */}
-                {selectedOrder && (
-                    <ShippingDialog
-                        open={showShippingDialog}
-                        onClose={() => setShowShippingDialog(false)}
-                        order={{
-                            id: selectedOrder.id,
-                            code: selectedOrder.code,
-                            recipientName: selectedOrder.recipientName,
-                            recipientPhone: selectedOrder.recipientPhone,
-                            deliveryAddress: selectedOrder.deliveryAddress,
-                            total: selectedOrder.total
-                        }}
-                        onSuccess={refreshOrders}
-                    />
-                )}
-
-                {/* Delivery Dialog */}
-                {selectedOrder && (
-                    <DeliveryDialog
-                        open={showDeliveryDialog}
-                        onClose={() => setShowDeliveryDialog(false)}
-                        order={{
-                            id: selectedOrder.id,
-                            code: selectedOrder.code,
-                            total: selectedOrder.total,
-                            paymentMethod: selectedOrder.paymentMethod,
-                            shippingFee: selectedOrder.shippingFee,
-                            shippingPaidBy: selectedOrder.shippingPaidBy,
-                            items: selectedOrder.items.map(item => ({
-                                id: item.id,
-                                productName: item.product.name,
-                                sku: item.product.sku,
-                                quantity: item.quantity,
-                                price: item.price,
-                                unit: item.product.unit
-                            }))
-                        }}
-                        onSuccess={refreshOrders}
-                    />
-                )}
-            </Tabs>
-        </div>
-    );
+                                    );
 }

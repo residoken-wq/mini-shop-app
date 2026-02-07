@@ -90,7 +90,7 @@ function generateVietQRUrl(
 }
 
 export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
-    ({ order, shopSettings }, ref) => {
+    ({ order, shopSettings, format = "thermal" }, ref) => {
         const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK">(
             order.paymentMethod === "QR" ? "BANK" : "CASH"
         );
@@ -123,22 +123,24 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
             )
             : null;
 
+        const isA5 = format === "a5";
+
         return (
             <div
                 ref={ref}
-                className="bg-white p-6 min-w-[320px] max-w-[400px] mx-auto font-sans"
+                className={`bg-white p-6 mx-auto font-sans ${isA5 ? "w-[148mm] max-w-[148mm]" : "min-w-[320px] max-w-[400px]"}`}
                 style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
             >
                 {/* Header */}
-                <div className="text-center border-b-2 border-dashed border-gray-300 pb-4 mb-4">
-                    <h1 className="text-2xl font-bold text-gray-800">{shopName}</h1>
+                <div className={`text-center pb-4 mb-4 ${isA5 ? "border-b-2 border-gray-800" : "border-b-2 border-dashed border-gray-300"}`}>
+                    <h1 className={`${isA5 ? "text-3xl" : "text-2xl"} font-bold text-gray-800 uppercase`}>{shopName}</h1>
                     {shopAddress && <p className="text-sm text-gray-500">{shopAddress}</p>}
                     {shopPhone && <p className="text-sm text-gray-500">ĐT: {shopPhone}</p>}
                 </div>
 
                 {/* Receipt Title */}
                 <div className="text-center mb-4">
-                    <h2 className="text-xl font-bold">HÓA ĐƠN BÁN HÀNG</h2>
+                    <h2 className={`${isA5 ? "text-2xl" : "text-xl"} font-bold uppercase`}>HÓA ĐƠN BÁN HÀNG</h2>
                     <p className="text-sm text-gray-600">Mã: {order.code}</p>
                     <p className="text-sm text-gray-500">
                         {new Date(order.createdAt).toLocaleString('vi-VN', {
@@ -152,7 +154,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 </div>
 
                 {/* Customer Info */}
-                <div className="border-b border-dashed border-gray-200 pb-3 mb-3">
+                <div className={`pb-3 mb-3 ${isA5 ? "border-b border-gray-800" : "border-b border-dashed border-gray-200"}`}>
                     <p className="text-sm">
                         <span className="text-gray-500">Khách hàng:</span>{" "}
                         <span className="font-medium">
@@ -195,7 +197,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
 
                     {/* QR Code Toggle (Only show if not cancelled) */}
                     {order.status !== "CANCELLED" && (
-                        <div className="mt-2 pt-2 border-t border-dashed no-print">
+                        <div className={`mt-2 pt-2 border-t no-print ${isA5 ? "border-gray-200" : "border-dashed border-gray-200"}`}>
                             <span className="text-xs text-gray-500 block mb-1">Hiển thị mã thanh toán:</span>
                             <div className="flex gap-2">
                                 <button
@@ -232,141 +234,125 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
 
                 {/* Items Table */}
                 <div className="mb-4">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm border-collapse">
                         <thead>
-                            <tr className="border-b border-gray-200">
-                                <th className="text-left py-2 font-medium text-gray-600">Sản phẩm</th>
-                                <th className="text-center py-2 font-medium text-gray-600 w-12">SL</th>
-                                <th className="text-right py-2 font-medium text-gray-600 w-20">Đ.Giá</th>
-                                <th className="text-right py-2 font-medium text-gray-600 w-24">T.Tiền</th>
+                            <tr className={`${isA5 ? "border-b-2 border-gray-800" : "border-b border-gray-200"}`}>
+                                <th className={`text-left py-2 font-medium text-gray-600 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>Sản phẩm</th>
+                                <th className={`text-center py-2 font-medium text-gray-600 w-12 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>SL</th>
+                                <th className={`text-right py-2 font-medium text-gray-600 w-20 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>Đ.Giá</th>
+                                <th className={`text-right py-2 font-medium text-gray-600 w-24 ${isA5 ? "px-2" : ""}`}>T.Tiền</th>
                             </tr>
                         </thead>
                         <tbody>
                             {order.items.map((item, index) => (
-                                <tr key={item.id} className={index % 2 === 0 ? "bg-gray-50" : ""}>
-                                    <td className="py-2 pr-2">
+                                <tr key={item.id} className={`${index % 2 === 0 ? "bg-gray-50" : ""} ${isA5 ? "border-b border-gray-200" : ""}`}>
+                                    <td className={`py-2 pr-2 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>
                                         <div className="font-medium text-gray-800">{item.product.name}</div>
                                         <div className="text-xs text-gray-400">{item.product.unit}</div>
                                     </td>
-                                    <td className="text-center py-2 text-gray-700">{item.quantity}</td>
-                                    <td className="text-right py-2 text-gray-600">{formatPrice(item.price)}</td>
-                                    <td className="text-right py-2 font-medium text-gray-800">
-                                        {formatPrice(item.price * item.quantity)}
-                                    </td>
+                                    <td className={`text-center py-2 align-top ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>{item.quantity}</td>
+                                    <td className={`text-right py-2 align-top ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>{formatPrice(item.price)}</td>
+                                    <td className={`text-right py-2 align-top font-medium ${isA5 ? "px-2" : ""}`}>{formatPrice(item.price * item.quantity)}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Totals */}
-                <div className="border-t-2 border-dashed border-gray-300 pt-3">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-gray-600">Số lượng SP:</span>
-                        <span className="font-medium">{order.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
+                {/* Summary */}
+                <div className={`pt-2 ${isA5 ? "border-t border-gray-800" : "border-t border-dashed border-gray-300"}`}>
+                    <div className="flex justify-between py-1">
+                        <span className="text-gray-600">Tổng tiền hàng:</span>
+                        <span className="font-medium">{formatPrice(subtotal)}</span>
                     </div>
 
-                    {/* Subtotal when has discount or shipping */}
-                    {((order.discount && order.discount > 0) || shippingForCustomer > 0) && (
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-gray-600">Tiền hàng:</span>
-                            <span className="font-medium">{formatPrice(subtotal)}đ</span>
+                    {shippingForCustomer > 0 && (
+                        <div className="flex justify-between py-1">
+                            <span className="text-gray-600">Phí vận chuyển:</span>
+                            <span className="font-medium">{formatPrice(shippingForCustomer)}</span>
                         </div>
                     )}
 
-                    {/* Discount */}
                     {order.discount && order.discount > 0 && (
-                        <div className="flex justify-between items-center mb-1 text-orange-600">
-                            <span>🏷️ Giảm giá:</span>
-                            <span className="font-medium">-{formatPrice(order.discount)}đ</span>
+                        <div className="flex justify-between py-1 text-green-600">
+                            <span>Giảm giá:</span>
+                            <span>-{formatPrice(order.discount)}</span>
                         </div>
                     )}
 
-                    {/* Shipping Info */}
-                    {order.shippingFee && order.shippingFee > 0 && (
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-gray-600">
-                                🚚 Phí vận chuyển {order.carrierName ? `(${order.carrierName})` : ''}:
-                            </span>
-                            <span className="font-medium">
-                                {order.shippingPaidBy === "SHOP" ? (
-                                    <span className="text-green-600">Shop trả</span>
-                                ) : (
-                                    <span>{formatPrice(order.shippingFee)}đ</span>
-                                )}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Delivery Note */}
-                    {order.deliveryNote && (
-                        <div className="mb-2 p-2 bg-blue-50 rounded border border-blue-200 text-sm">
-                            <span className="text-gray-600">📝 Ghi chú giao hàng:</span> {order.deliveryNote}
-                        </div>
-                    )}
-
-                    {/* Grand Total */}
-                    <div className="flex justify-between items-center text-lg font-bold text-gray-800 border-t border-gray-200 pt-2 mt-2">
-                        <span>TỔNG CỘNG:</span>
-                        <span className="text-primary">{formatCurrency(grandTotal)}</span>
+                    <div className={`flex justify-between py-2 mt-2 ${isA5 ? "border-t border-gray-300 text-lg" : "border-t border-dashed border-gray-200 text-base"}`}>
+                        <span className="font-bold">TỔNG CỘNG:</span>
+                        <span className="font-bold text-blue-600">{formatCurrency(grandTotal)}</span>
                     </div>
 
-                    {/* Paid amount if partially paid */}
-                    {order.paid && order.paid > 0 && order.paid < grandTotal && (
-                        <>
-                            <div className="flex justify-between items-center mt-1 text-green-600">
-                                <span>✓ Đã thanh toán:</span>
-                                <span className="font-medium">{formatPrice(order.paid)}đ</span>
-                            </div>
-                            <div className="flex justify-between items-center text-orange-600 font-bold">
-                                <span>⏳ Còn lại:</span>
-                                <span>{formatPrice(amountDue)}đ</span>
-                            </div>
-                        </>
+                    {/* Paid / Remaining */}
+                    {order.paid && order.paid > 0 && (
+                        <div className="flex justify-between py-1 text-sm text-gray-600">
+                            <span>Đã thanh toán:</span>
+                            <span>{formatPrice(order.paid)}</span>
+                        </div>
+                    )}
+
+                    {amountDue > 0 ? (
+                        <div className="flex justify-between py-1 font-bold text-red-500">
+                            <span>Cần thanh toán:</span>
+                            <span>{formatCurrency(amountDue)}</span>
+                        </div>
+                    ) : (
+                        <div className="mt-2 text-center text-green-600 font-bold border border-green-200 bg-green-50 p-1 rounded">
+                            ĐÃ THANH TOÁN ĐỦ
+                        </div>
                     )}
                 </div>
+
+                {/* Delivery Note */}
+                {order.deliveryNote && (
+                    <div className="mb-2 p-2 bg-blue-50 rounded border border-blue-200 text-sm">
+                        <span className="text-gray-600">📝 Ghi chú giao hàng:</span> {order.deliveryNote}
+                    </div>
+                )}
 
                 {/* VietQR Code - Only show for bank transfer */}
                 {paymentMethod === "BANK" && vietQRUrl && (
-                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
-                        <div className="text-center">
-                            <p className="text-sm font-medium text-gray-700 mb-2">Quét mã để thanh toán</p>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                                src={vietQRUrl}
-                                alt="VietQR Payment"
-                                className="mx-auto rounded-lg border border-gray-200"
-                                style={{ maxWidth: "200px" }}
-                            />
-                            <div className="mt-2 text-xs text-gray-500">
-                                <p>{shopSettings?.bankName} - {shopSettings?.bankAccount}</p>
-                                <p>{shopSettings?.bankOwner}</p>
-                                <p className="font-medium text-gray-700">Số tiền: {formatCurrency(amountDue > 0 ? amountDue : grandTotal)}</p>
-                                <p>Nội dung: {order.code}</p>
-                            </div>
+                    <div className="text-center">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Quét mã để thanh toán</p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={vietQRUrl}
+                            alt="VietQR Payment"
+                            className="mx-auto rounded-lg border border-gray-200"
+                            style={{ maxWidth: "200px" }}
+                        />
+                        <div className="mt-2 text-xs text-gray-500">
+                            <p>{shopSettings?.bankName} - {shopSettings?.bankAccount}</p>
+                            <p>{shopSettings?.bankOwner}</p>
+                            <p className="font-medium text-gray-700">Số tiền: {formatCurrency(amountDue > 0 ? amountDue : grandTotal)}</p>
+                            <p>Nội dung: {order.code}</p>
                         </div>
                     </div>
-                )}
-
-                {/* Bank info fallback if no QR available */}
-                {paymentMethod === "BANK" && !vietQRUrl && shopSettings?.bankAccount && (
-                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
-                        <div className="text-center bg-blue-50 p-3 rounded-lg">
-                            <p className="text-sm font-medium text-gray-700 mb-1">Thông tin chuyển khoản</p>
-                            <p className="text-sm">{shopSettings?.bankName}</p>
-                            <p className="text-lg font-bold text-blue-600">{shopSettings?.bankAccount}</p>
-                            <p className="text-sm">{shopSettings?.bankOwner}</p>
-                            <p className="text-sm mt-1 font-medium">Nội dung: {order.code}</p>
-                        </div>
                     </div>
-                )}
+        )
+    }
 
-                {/* Footer */}
-                <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-200">
-                    <p className="text-sm text-gray-500">Cảm ơn quý khách!</p>
-                    <p className="text-xs text-gray-400 mt-1">Hẹn gặp lại ❤️</p>
-                </div>
+                {/* Bank info fallback if no QR available */ }
+                { paymentMethod === "BANK" && !vietQRUrl && shopSettings?.bankAccount && (
+        <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+            <div className="text-center bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm font-medium text-gray-700 mb-1">Thông tin chuyển khoản</p>
+                <p className="text-sm">{shopSettings?.bankName}</p>
+                <p className="text-lg font-bold text-blue-600">{shopSettings?.bankAccount}</p>
+                <p className="text-sm">{shopSettings?.bankOwner}</p>
+                <p className="text-sm mt-1 font-medium">Nội dung: {order.code}</p>
             </div>
+        </div>
+    )}
+
+{/* Footer */ }
+<div className="text-center mt-6 pt-4 border-t border-dashed border-gray-200">
+    <p className="text-sm text-gray-500">Cảm ơn quý khách!</p>
+    <p className="text-xs text-gray-400 mt-1">Hẹn gặp lại ❤️</p>
+</div>
+            </div >
         );
     }
 );
