@@ -1088,9 +1088,10 @@ export async function addOrderPayment(data: {
         const newPaid = (order.paid || 0) + data.amount;
 
         // Allow for small floating point discrepancies (e.g. 1 dong)
-        if (newPaid > order.total + 1) {
-            return { success: false, error: "Số tiền thanh toán vượt quá tổng giá trị đơn hàng" };
-        }
+        // Validation removed as per user request
+        // if (newPaid > order.total + 1) {
+        //     return { success: false, error: "Số tiền thanh toán vượt quá tổng giá trị đơn hàng" };
+        // }
 
         // 1. Create Transaction (Income for Sale, Expense for Purchase)
         if (order.type === "SALE") {
