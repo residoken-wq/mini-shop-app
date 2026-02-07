@@ -88,6 +88,12 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
         }
     };
 
+    const handlePrintImmediate = () => {
+        if (!receiptRef.current) return;
+        // Use the imported printContent utility
+        printContent(receiptRef.current);
+    };
+
     const filteredOrders = orders.filter(order => {
         const matchesSearch = order.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
             order.customer?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
