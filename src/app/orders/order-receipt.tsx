@@ -129,21 +129,21 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
         return (
             <div
                 ref={ref}
-                className={`bg-white p-6 mx-auto font-sans ${isA5 ? "w-[148mm] max-w-[148mm]" : "min-w-[320px] max-w-[400px]"}`}
+                className={`bg-white mx-auto font-sans ${isA5 ? "w-[148mm] min-h-[200mm] p-4" : "min-w-[320px] max-w-[400px] p-6"}`}
                 style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
             >
                 {/* Header */}
-                <div className={`text-center pb-4 mb-4 ${isA5 ? "border-b-2 border-gray-800" : "border-b-2 border-dashed border-gray-300"}`}>
-                    <h1 className={`${isA5 ? "text-3xl" : "text-2xl"} font-bold text-gray-800 uppercase`}>{shopName}</h1>
-                    {shopAddress && <p className="text-sm text-gray-500">{shopAddress}</p>}
-                    {shopPhone && <p className="text-sm text-gray-500">ĐT: {shopPhone}</p>}
+                <div className={`text-center pb-2 mb-2 ${isA5 ? "border-b border-gray-800" : "border-b-2 border-dashed border-gray-300 pb-4 mb-4"}`}>
+                    <h1 className={`${isA5 ? "text-xl" : "text-2xl"} font-bold text-gray-800 uppercase`}>{shopName}</h1>
+                    {shopAddress && <p className="text-xs text-gray-500">{shopAddress}</p>}
+                    {shopPhone && <p className="text-xs text-gray-500">ĐT: {shopPhone}</p>}
                 </div>
 
                 {/* Receipt Title */}
-                <div className="text-center mb-4">
-                    <h2 className={`${isA5 ? "text-2xl" : "text-xl"} font-bold uppercase`}>HÓA ĐƠN BÁN HÀNG</h2>
-                    <p className="text-sm text-gray-600">Mã: {order.code}</p>
-                    <p className="text-sm text-gray-500">
+                <div className="text-center mb-2">
+                    <h2 className={`${isA5 ? "text-lg" : "text-xl"} font-bold uppercase`}>HÓA ĐƠN BÁN HÀNG</h2>
+                    <p className="text-xs text-gray-600">Mã: {order.code}</p>
+                    <p className="text-xs text-gray-500">
                         {new Date(order.createdAt).toLocaleString('vi-VN', {
                             day: '2-digit',
                             month: '2-digit',
@@ -155,31 +155,31 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 </div>
 
                 {/* Customer Info */}
-                <div className={`pb-3 mb-3 ${isA5 ? "border-b border-gray-800" : "border-b border-dashed border-gray-200"}`}>
-                    <p className="text-sm">
+                <div className={`pb-2 mb-2 ${isA5 ? "border-b border-gray-800 text-xs" : "border-b border-dashed border-gray-200 pb-3 mb-3 text-sm"}`}>
+                    <p className={isA5 ? "mb-1" : "mb-1"}>
                         <span className="text-gray-500">Khách hàng:</span>{" "}
                         <span className="font-medium">
                             {order.recipientName || order.customer?.name || "Khách lẻ"}
                         </span>
                         {order.customer?.customerType === "wholesale" && (
-                            <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Sỉ</span>
+                            <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1 py-0.5 rounded">Sỉ</span>
                         )}
                     </p>
                     {(order.recipientPhone || order.customer?.phone) && (
-                        <p className="text-sm text-gray-500">
+                        <p className={`text-gray-500 ${isA5 ? "mb-1" : "mb-1"}`}>
                             ĐT: {order.recipientPhone || order.customer?.phone}
                         </p>
                     )}
 
                     {/* Customer Address - NEW */}
                     {customerAddress && (
-                        <p className="text-sm text-gray-500">
+                        <p className={`text-gray-500 ${isA5 ? "mb-1" : "mb-1"}`}>
                             📍 {customerAddress}
                         </p>
                     )}
 
                     {/* Delivery Method */}
-                    <p className="text-sm">
+                    <p className={isA5 ? "mb-1" : "mb-1"}>
                         <span className="text-gray-500">Nhận hàng:</span>{" "}
                         <span className="font-medium">
                             {order.deliveryMethod === "PICKUP" ? "🏪 Lấy tại shop" : "🛵 Giao hàng"}
@@ -187,7 +187,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                     </p>
 
                     {/* Payment Method Display */}
-                    <p className="text-sm">
+                    <p>
                         <span className="text-gray-500">Thanh toán:</span>{" "}
                         <span className="font-medium">
                             {order.paymentMethod === "CASH" ? "Tiền mặt" :
@@ -227,33 +227,33 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
 
                     {/* Note */}
                     {order.note && (
-                        <p className="text-sm mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                            <span className="text-gray-600">📝 Ghi chú đơn hàng:</span> {order.note}
+                        <p className={`mt-2 p-1.5 bg-yellow-50 rounded border border-yellow-200 ${isA5 ? "text-xs" : "text-sm"}`}>
+                            <span className="text-gray-600">📝 Ghi chú:</span> {order.note}
                         </p>
                     )}
                 </div>
 
                 {/* Items Table */}
-                <div className="mb-4">
-                    <table className="w-full text-sm border-collapse">
+                <div className="mb-2">
+                    <table className={`w-full border-collapse ${isA5 ? "text-xs" : "text-sm"}`}>
                         <thead>
-                            <tr className={`${isA5 ? "border-b-2 border-gray-800" : "border-b border-gray-200"}`}>
-                                <th className={`text-left py-2 font-medium text-gray-600 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>Sản phẩm</th>
-                                <th className={`text-center py-2 font-medium text-gray-600 w-12 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>SL</th>
-                                <th className={`text-right py-2 font-medium text-gray-600 w-20 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>Đ.Giá</th>
-                                <th className={`text-right py-2 font-medium text-gray-600 w-24 ${isA5 ? "px-2" : ""}`}>T.Tiền</th>
+                            <tr className={`${isA5 ? "border-b border-gray-800" : "border-b border-gray-200"}`}>
+                                <th className={`text-left py-1 font-medium text-gray-600 ${isA5 ? "border-r border-gray-300 px-1" : ""}`}>Sản phẩm</th>
+                                <th className={`text-center py-1 font-medium text-gray-600 w-8 ${isA5 ? "border-r border-gray-300 px-1" : ""}`}>SL</th>
+                                <th className={`text-right py-1 font-medium text-gray-600 w-16 ${isA5 ? "border-r border-gray-300 px-1" : ""}`}>Đ.Giá</th>
+                                <th className={`text-right py-1 font-medium text-gray-600 w-20 ${isA5 ? "px-1" : ""}`}>T.Tiền</th>
                             </tr>
                         </thead>
                         <tbody>
                             {order.items.map((item, index) => (
                                 <tr key={item.id} className={`${index % 2 === 0 ? "bg-gray-50" : ""} ${isA5 ? "border-b border-gray-200" : ""}`}>
-                                    <td className={`py-2 pr-2 ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>
+                                    <td className={`py-1 pr-1 ${isA5 ? "border-r border-gray-300 px-1" : ""}`}>
                                         <div className="font-medium text-gray-800">{item.product.name}</div>
-                                        <div className="text-xs text-gray-400">{item.product.unit}</div>
+                                        <div className="text-[10px] text-gray-400">{item.product.unit}</div>
                                     </td>
-                                    <td className={`text-center py-2 align-top ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>{item.quantity}</td>
-                                    <td className={`text-right py-2 align-top ${isA5 ? "border-r border-gray-300 px-2" : ""}`}>{formatPrice(item.price)}</td>
-                                    <td className={`text-right py-2 align-top font-medium ${isA5 ? "px-2" : ""}`}>{formatPrice(item.price * item.quantity)}</td>
+                                    <td className={`text-center py-1 align-top ${isA5 ? "border-r border-gray-300 px-1" : ""}`}>{item.quantity}</td>
+                                    <td className={`text-right py-1 align-top ${isA5 ? "border-r border-gray-300 px-1" : ""}`}>{formatPrice(item.price)}</td>
+                                    <td className={`text-right py-1 align-top font-medium ${isA5 ? "px-1" : ""}`}>{formatPrice(item.price * item.quantity)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -261,46 +261,46 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 </div>
 
                 {/* Summary */}
-                <div className={`pt-2 ${isA5 ? "border-t border-gray-800" : "border-t border-dashed border-gray-300"}`}>
-                    <div className="flex justify-between py-1">
+                <div className={`pt-2 ${isA5 ? "border-t border-gray-800 text-xs" : "border-t border-dashed border-gray-300 text-sm"}`}>
+                    <div className="flex justify-between py-0.5">
                         <span className="text-gray-600">Tổng tiền hàng:</span>
                         <span className="font-medium">{formatPrice(subtotal)}</span>
                     </div>
 
                     {shippingForCustomer > 0 && (
-                        <div className="flex justify-between py-1">
+                        <div className="flex justify-between py-0.5">
                             <span className="text-gray-600">Phí vận chuyển:</span>
                             <span className="font-medium">{formatPrice(shippingForCustomer)}</span>
                         </div>
                     )}
 
                     {order.discount && order.discount > 0 && (
-                        <div className="flex justify-between py-1 text-green-600">
+                        <div className="flex justify-between py-0.5 text-green-600">
                             <span>Giảm giá:</span>
                             <span>-{formatPrice(order.discount)}</span>
                         </div>
                     )}
 
-                    <div className={`flex justify-between py-2 mt-2 ${isA5 ? "border-t border-gray-300 text-lg" : "border-t border-dashed border-gray-200 text-base"}`}>
+                    <div className={`flex justify-between py-1 mt-1 ${isA5 ? "border-t border-gray-300 text-base" : "border-t border-dashed border-gray-200 text-base"}`}>
                         <span className="font-bold">TỔNG CỘNG:</span>
                         <span className="font-bold text-blue-600">{formatCurrency(grandTotal)}</span>
                     </div>
 
                     {/* Paid / Remaining */}
                     {order.paid && order.paid > 0 && (
-                        <div className="flex justify-between py-1 text-sm text-gray-600">
+                        <div className="flex justify-between py-0.5 text-gray-600">
                             <span>Đã thanh toán:</span>
                             <span>{formatPrice(order.paid)}</span>
                         </div>
                     )}
 
                     {amountDue > 0 ? (
-                        <div className="flex justify-between py-1 font-bold text-red-500">
+                        <div className="flex justify-between py-0.5 font-bold text-red-500">
                             <span>Cần thanh toán:</span>
                             <span>{formatCurrency(amountDue)}</span>
                         </div>
                     ) : (
-                        <div className="mt-2 text-center text-green-600 font-bold border border-green-200 bg-green-50 p-1 rounded">
+                        <div className="mt-1 text-center text-green-600 font-bold border border-green-200 bg-green-50 p-1 rounded">
                             ĐÃ THANH TOÁN ĐỦ
                         </div>
                     )}
@@ -308,23 +308,23 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
 
                 {/* Delivery Note */}
                 {order.deliveryNote && (
-                    <div className="mb-2 p-2 bg-blue-50 rounded border border-blue-200 text-sm">
+                    <div className={`mb-2 p-1.5 bg-blue-50 rounded border border-blue-200 ${isA5 ? "text-xs" : "text-sm"}`}>
                         <span className="text-gray-600">📝 Ghi chú giao hàng:</span> {order.deliveryNote}
                     </div>
                 )}
 
                 {/* VietQR Code - Only show for bank transfer */}
                 {paymentMethod === "BANK" && vietQRUrl && (
-                    <div className="text-center">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Quét mã để thanh toán</p>
+                    <div className="text-center mt-2">
+                        <p className={`font-medium text-gray-700 mb-1 ${isA5 ? "text-xs" : "text-sm"}`}>Quét mã để thanh toán</p>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src={vietQRUrl}
                             alt="VietQR Payment"
                             className="mx-auto rounded-lg border border-gray-200"
-                            style={{ maxWidth: "200px" }}
+                            style={{ maxWidth: isA5 ? "120px" : "150px" }}
                         />
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className={`mt-1 text-gray-500 ${isA5 ? "text-[10px]" : "text-xs"}`}>
                             <p>{shopSettings?.bankName} - {shopSettings?.bankAccount}</p>
                             <p>{shopSettings?.bankOwner}</p>
                             <p className="font-medium text-gray-700">Số tiền: {formatCurrency(amountDue > 0 ? amountDue : grandTotal)}</p>
@@ -335,21 +335,20 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
 
                 {/* Bank info fallback if no QR available */}
                 {paymentMethod === "BANK" && !vietQRUrl && shopSettings?.bankAccount && (
-                    <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
-                        <div className="text-center bg-blue-50 p-3 rounded-lg">
-                            <p className="text-sm font-medium text-gray-700 mb-1">Thông tin chuyển khoản</p>
-                            <p className="text-sm">{shopSettings?.bankName}</p>
-                            <p className="text-lg font-bold text-blue-600">{shopSettings?.bankAccount}</p>
-                            <p className="text-sm">{shopSettings?.bankOwner}</p>
-                            <p className="text-sm mt-1 font-medium">Nội dung: {order.code}</p>
+                    <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
+                        <div className="text-center bg-blue-50 p-2 rounded-lg">
+                            <p className={`font-medium text-gray-700 mb-1 ${isA5 ? "text-xs" : "text-sm"}`}>Thông tin chuyển khoản</p>
+                            <p className="text-xs">{shopSettings?.bankName}</p>
+                            <p className="text-sm font-bold text-blue-600">{shopSettings?.bankAccount}</p>
+                            <p className="text-xs">{shopSettings?.bankOwner}</p>
+                            <p className="text-xs mt-1 font-medium">Nội dung: {order.code}</p>
                         </div>
                     </div>
                 )}
 
                 {/* Footer */}
-                <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-200">
-                    <p className="text-sm text-gray-500">Cảm ơn quý khách!</p>
-                    <p className="text-xs text-gray-400 mt-1">Hẹn gặp lại ❤️</p>
+                <div className={`text-center mt-4 pt-2 border-t border-dashed border-gray-200 ${isA5 ? "text-[10px]" : "text-xs"}`}>
+                    <p className="text-gray-500">Cảm ơn quý khách!</p>
                 </div>
             </div>
         );
