@@ -48,7 +48,7 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
     const [newCarrierPhone, setNewCarrierPhone] = useState("");
     const [deliveryNote, setDeliveryNote] = useState("");
 
-    const isUpdate = order.status === "SHIPPING";
+    const isUpdate = order.status === "SHIPPING" || order.status === "DELIVERED";
 
     useEffect(() => {
         if (open) {

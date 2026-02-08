@@ -574,7 +574,7 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                                         {/* Status Change Buttons */}
                                         {selectedOrder.status !== "COMPLETED" && selectedOrder.status !== "CANCELLED" && (
                                             <div className="mt-4 pt-4 border-t flex flex-wrap gap-2 items-center">
-                                                {selectedOrder.status === "SHIPPING" && (
+                                                {(selectedOrder.status === "SHIPPING" || selectedOrder.status === "DELIVERED") && (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"

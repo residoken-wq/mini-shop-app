@@ -861,8 +861,8 @@ export async function updateShipping(orderId: string, data: {
         if (!order) {
             return { success: false, error: "Order not found" };
         }
-        if (order.status !== "SHIPPING") {
-            return { success: false, error: "Order must be in SHIPPING status to update details" };
+        if (order.status !== "SHIPPING" && order.status !== "DELIVERED") {
+            return { success: false, error: "Order must be in SHIPPING or DELIVERED status to update details" };
         }
 
         await db.order.update({
