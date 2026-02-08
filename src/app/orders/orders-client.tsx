@@ -820,7 +820,7 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                             status: selectedOrder.status,
                             carrierName: selectedOrder.carrierName,
                             shippingFee: selectedOrder.shippingFee,
-                            shippingPaidBy: selectedOrder.shippingPaidBy,
+                            shippingPaidBy: selectedOrder.shippingPaidBy as "SHOP" | "CUSTOMER" | null,
                             deliveryNote: selectedOrder.deliveryNote
                         }}
                         onSuccess={refreshOrders}
