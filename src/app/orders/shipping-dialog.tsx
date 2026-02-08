@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Truck, Plus, RefreshCw } from "lucide-react";
 import RichTextEditor from "@/components/ui/rich-text-editor";
-import { getCarriers, createCarrier, startShipping } from "./actions";
+import { getCarriers, createCarrier, startShipping, updateShipping } from "./actions";
 
 interface ShippingDialogProps {
     open: boolean;
@@ -21,6 +21,12 @@ interface ShippingDialogProps {
         recipientPhone?: string | null;
         deliveryAddress?: string | null;
         total: number;
+        // Optional fields for pre-filling when editing
+        status?: string;
+        carrierName?: string | null;
+        shippingFee?: number | null;
+        shippingPaidBy?: "SHOP" | "CUSTOMER" | null;
+        deliveryNote?: string | null;
     };
     onSuccess: () => void;
 }
@@ -42,11 +48,26 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
     const [newCarrierPhone, setNewCarrierPhone] = useState("");
     const [deliveryNote, setDeliveryNote] = useState("");
 
+    const isUpdate = order.status === "SHIPPING";
+
     useEffect(() => {
         if (open) {
             loadCarriers();
+            // Pre-fill data if updating
+            if (isUpdate) {
+                setSelectedCarrier(order.carrierName || "");
+                setShippingFee(order.shippingFee || 0);
+                setShippingPaidBy(order.shippingPaidBy || "CUSTOMER");
+                setDeliveryNote(order.deliveryNote || "");
+            } else {
+                // Reset defaults for new shipping
+                setSelectedCarrier("");
+                setShippingFee(0);
+                setShippingPaidBy("CUSTOMER");
+                setDeliveryNote("");
+            }
         }
-    }, [open]);
+    }, [open, isUpdate, order]);
 
     const loadCarriers = async () => {
         const result = await getCarriers();
@@ -76,18 +97,25 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
         }
 
         setIsLoading(true);
-        const result = await startShipping(order.id, {
+        const data = {
             carrierName: selectedCarrier,
             shippingFee,
             shippingPaidBy,
             deliveryNote: deliveryNote.trim() || undefined
-        });
+        };
+
+        let result;
+        if (isUpdate) {
+            result = await updateShipping(order.id, data);
+        } else {
+            result = await startShipping(order.id, data);
+        }
 
         if (result.success) {
             onSuccess();
             onClose();
         } else {
-            alert(result.error || "Lỗi bắt đầu giao hàng");
+            alert(result.error || (isUpdate ? "Lỗi cập nhật giao hàng" : "Lỗi bắt đầu giao hàng"));
         }
         setIsLoading(false);
     };
@@ -100,7 +128,7 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Truck className="h-5 w-5 text-orange-500" />
-                        Giao hàng - {order.code}
+                        {isUpdate ? "Cập nhật giao hàng" : "Giao hàng"} - {order.code}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -260,23 +288,14 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
                     )}
                 </div>
 
-                <DialogFooter className="gap-2 sm:gap-0">
-                    <Button variant="outline" onClick={onClose}>
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button variant="outline" onClick={onClose} disabled={isLoading}>
                         Hủy
                     </Button>
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={isLoading || !selectedCarrier}
-                        className="bg-orange-600 hover:bg-orange-700"
-                    >
-                        {isLoading ? (
-                            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                            <Truck className="h-4 w-4 mr-2" />
-                        )}
-                        Bắt đầu giao hàng
+                    <Button onClick={handleSubmit} disabled={isLoading || !selectedCarrier} className="bg-orange-600 hover:bg-orange-700">
+                        {isLoading ? "Đang xử lý..." : isUpdate ? "Lưu cập nhật" : "Bắt đầu giao hàng"}
                     </Button>
-                </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
     );

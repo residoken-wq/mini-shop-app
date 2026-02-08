@@ -849,6 +849,40 @@ export async function startShipping(orderId: string, data: {
     }
 }
 
+// Update shipping info - for orders already in SHIPPING status
+export async function updateShipping(orderId: string, data: {
+    carrierName: string;
+    shippingFee: number;
+    shippingPaidBy: "SHOP" | "CUSTOMER";
+    deliveryNote?: string;
+}) {
+    try {
+        const order = await db.order.findUnique({ where: { id: orderId } });
+        if (!order) {
+            return { success: false, error: "Order not found" };
+        }
+        if (order.status !== "SHIPPING") {
+            return { success: false, error: "Order must be in SHIPPING status to update details" };
+        }
+
+        await db.order.update({
+            where: { id: orderId },
+            data: {
+                carrierName: data.carrierName,
+                shippingFee: data.shippingFee,
+                shippingPaidBy: data.shippingPaidBy,
+                deliveryNote: data.deliveryNote || null,
+            }
+        });
+
+        revalidatePath("/orders");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update shipping:", error);
+        return { success: false, error: "Failed to update shipping" };
+    }
+}
+
 // Complete delivery - from SHIPPING to COMPLETED
 export async function completeDelivery(orderId: string, data: {
     returnedAmount: number;

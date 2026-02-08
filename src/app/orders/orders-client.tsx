@@ -573,7 +573,18 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
 
                                         {/* Status Change Buttons */}
                                         {selectedOrder.status !== "COMPLETED" && selectedOrder.status !== "CANCELLED" && (
-                                            <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
+                                            <div className="mt-4 pt-4 border-t flex flex-wrap gap-2 items-center">
+                                                {selectedOrder.status === "SHIPPING" && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setShowShippingDialog(true)}
+                                                        className="mr-2"
+                                                    >
+                                                        <Truck className="w-4 h-4 mr-1" />
+                                                        Cập nhật giao hàng
+                                                    </Button>
+                                                )}
                                                 <span className="text-sm text-gray-500 mr-2">Chuyển sang:</span>
                                                 {getAllowedNextStatuses(selectedOrder.status).map(nextStatus => {
                                                     // For READY -> SHIPPING, open shipping dialog (Only for SALE?)
@@ -805,7 +816,12 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                             recipientName: selectedOrder.recipientName,
                             recipientPhone: selectedOrder.recipientPhone,
                             deliveryAddress: selectedOrder.deliveryAddress,
-                            total: selectedOrder.total
+                            total: selectedOrder.total,
+                            status: selectedOrder.status,
+                            carrierName: selectedOrder.carrierName,
+                            shippingFee: selectedOrder.shippingFee,
+                            shippingPaidBy: selectedOrder.shippingPaidBy,
+                            deliveryNote: selectedOrder.deliveryNote
                         }}
                         onSuccess={refreshOrders}
                     />
