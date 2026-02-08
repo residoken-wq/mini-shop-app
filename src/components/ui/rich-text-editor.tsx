@@ -20,9 +20,10 @@ interface RichTextEditorProps {
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
+    minHeight?: string;
 }
 
-export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+export default function RichTextEditor({ value, onChange, placeholder, minHeight = "200px" }: RichTextEditorProps) {
     return (
         <div className="prose-editor">
             <CKEditor
@@ -58,7 +59,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
             />
             <style jsx global>{`
                 .ck-editor__editable_inline {
-                    min-height: 200px;
+                    min-height: ${minHeight};
                 }
                 .ck.ck-list__item .ck-button {
                     display: none; /* Hide drag handles if they appear incorrectly */

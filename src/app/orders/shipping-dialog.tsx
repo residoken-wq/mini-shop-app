@@ -104,7 +104,7 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1">
                     {/* Delivery Address */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <div className="flex items-start gap-2">
@@ -231,6 +231,7 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
                             value={deliveryNote}
                             onChange={setDeliveryNote}
                             placeholder="Ghi chú cho nhà vận chuyển (vd: giao buổi sáng, gọi trước khi giao...)"
+                            minHeight="100px"
                         />
                     </div>
 
