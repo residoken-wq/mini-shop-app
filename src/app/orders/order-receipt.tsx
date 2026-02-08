@@ -129,7 +129,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
         return (
             <div
                 ref={ref}
-                className={`bg-white mx-auto font-sans ${isA5 ? "w-[148mm] min-h-[200mm] p-4" : "min-w-[320px] max-w-[400px] p-6"}`}
+                className={`bg-white mx-auto font-sans ${isA5 ? "w-[135mm] min-h-[190mm] p-2" : "min-w-[320px] max-w-[400px] p-6"}`}
                 style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
             >
                 {/* Header */}
@@ -309,7 +309,11 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 {/* Delivery Note */}
                 {order.deliveryNote && (
                     <div className={`mb-2 p-1.5 bg-blue-50 rounded border border-blue-200 ${isA5 ? "text-xs" : "text-sm"}`}>
-                        <span className="text-gray-600">📝 Ghi chú giao hàng:</span> {order.deliveryNote}
+                        <span className="text-gray-600 font-semibold block mb-1">📝 Ghi chú giao hàng:</span>
+                        <div
+                            className="[&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-1"
+                            dangerouslySetInnerHTML={{ __html: order.deliveryNote }}
+                        />
                     </div>
                 )}
 

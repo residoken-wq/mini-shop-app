@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Truck, Plus, RefreshCw } from "lucide-react";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 import { getCarriers, createCarrier, startShipping } from "./actions";
 
 interface ShippingDialogProps {
@@ -226,12 +227,10 @@ export function ShippingDialog({ open, onClose, order, onSuccess }: ShippingDial
                     {/* Delivery Note */}
                     <div className="space-y-2">
                         <Label>Ghi chú giao hàng</Label>
-                        <textarea
+                        <RichTextEditor
                             value={deliveryNote}
-                            onChange={(e) => setDeliveryNote(e.target.value)}
+                            onChange={setDeliveryNote}
                             placeholder="Ghi chú cho nhà vận chuyển (vd: giao buổi sáng, gọi trước khi giao...)"
-                            rows={2}
-                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                         />
                     </div>
 
