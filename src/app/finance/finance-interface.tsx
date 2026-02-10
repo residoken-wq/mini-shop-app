@@ -216,30 +216,35 @@ export function FinanceInterface({ stats, debtors, initialTransactions, supplier
                                                         Đã TT: {new Date((t as any).paidAt).toLocaleDateString('vi-VN')}
                                                     </Badge>
                                                 ) : (
-                                                    <>
-                                                        <Button variant="ghost" size="sm" className="h-6 text-[10px] text-orange-600 bg-orange-50 hover:bg-orange-100" onClick={() => {
-                                                            setConfirmTarget(t);
-                                                            setConfirmOpen(true);
-                                                        }}>
-                                                            Chưa TT - Xác nhận ngay
-                                                        </Button>
-                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={async () => {
-                                                            if (confirm("Bạn có chắc muốn xóa phiếu chi này?")) {
-                                                                await deleteTransaction(t.id);
-                                                                const newTransactions = await getTransactions(supplierFilter);
-                                                                setTransactions(newTransactions);
-                                                            }
-                                                        }}>
-                                                            <Trash2 className="h-3 w-3" />
-                                                        </Button>
-                                                    </>
+                                                    <Button variant="ghost" size="sm" className="h-6 text-[10px] text-orange-600 bg-orange-50 hover:bg-orange-100" onClick={() => {
+                                                        setConfirmTarget(t);
+                                                        setConfirmOpen(true);
+                                                    }}>
+                                                        Chưa TT - Xác nhận ngay
+                                                    </Button>
                                                 )}
                                             </div>
                                         )}
                                     </div>
-                                    <span className={cn("font-bold", ["INCOME", "DEBT_COLLECTION"].includes(t.type) ? "text-green-600" : "text-red-600")}>
-                                        {["INCOME", "DEBT_COLLECTION"].includes(t.type) ? "+" : "-"}{formatMoney(t.amount)}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={cn("font-bold", ["INCOME", "DEBT_COLLECTION"].includes(t.type) ? "text-green-600" : "text-red-600")}>
+                                            {["INCOME", "DEBT_COLLECTION"].includes(t.type) ? "+" : "-"}{formatMoney(t.amount)}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                            onClick={async () => {
+                                                if (confirm("Bạn có chắc muốn xóa phiếu này? Nợ liên quan (nếu có) sẽ được hoàn tác.")) {
+                                                    await deleteTransaction(t.id);
+                                                    const newTransactions = await getTransactions(supplierFilter);
+                                                    setTransactions(newTransactions);
+                                                }
+                                            }}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             ))}
                         </CardContent>
@@ -344,6 +349,6 @@ export function FinanceInterface({ stats, debtors, initialTransactions, supplier
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

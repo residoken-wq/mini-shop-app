@@ -154,8 +154,40 @@ export async function confirmTransactionPayment(transactionId: string, paidDate:
 
 export async function deleteTransaction(id: string) {
     try {
-        await db.transaction.delete({ where: { id } });
+        const transaction = await db.transaction.findUnique({ where: { id } });
+        if (!transaction) return { success: false, error: "Transaction not found" };
+
+        await db.$transaction(async (tx) => {
+            // Revert Debt if applicable
+            if (transaction.type === "DEBT_COLLECTION" && transaction.customerId) {
+                // Was: Customer Paid Us -> Debt decreased
+                // Revert: Increase Debt
+                await tx.customer.update({
+                    where: { id: transaction.customerId },
+                    data: { debt: { increment: transaction.amount } }
+                });
+            } else if (transaction.type === "DEBT_PAYMENT" && transaction.supplierId) {
+                // Was: We Paid Supplier -> Debt decreased
+                // Revert: Increase Debt
+                await tx.supplier.update({
+                    where: { id: transaction.supplierId },
+                    data: { debt: { increment: transaction.amount } }
+                });
+            } else if (transaction.type === "EXPENSE" && transaction.supplierId && (transaction as any).isPaid) {
+                // Paid Expense linked to Supplier -> Debt decreased
+                // Revert: Increase Debt
+                await tx.supplier.update({
+                    where: { id: transaction.supplierId },
+                    data: { debt: { increment: transaction.amount } }
+                });
+            }
+
+            await tx.transaction.delete({ where: { id } });
+        });
+
         revalidatePath("/finance");
+        revalidatePath("/customers");
+        revalidatePath("/suppliers");
         return { success: true };
     } catch (e) {
         return { success: false, error: "Failed to delete transaction" };
