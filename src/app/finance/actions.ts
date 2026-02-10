@@ -182,12 +182,36 @@ export async function deleteTransaction(id: string) {
                 });
             }
 
+
             await tx.transaction.delete({ where: { id } });
+
+            // 2. Reduce Order Paid Amount if linked to an Order
+            // Try to find Order Code in description (e.g. "Order #SO-20231225-01" or "đơn hàng #SO-2023...")
+            if (transaction.description) {
+                const orderCodeMatch = transaction.description.match(/#([A-Z0-9-]+)/);
+                if (orderCodeMatch && orderCodeMatch[1]) {
+                    const orderCode = orderCodeMatch[1];
+                    const order = await tx.order.findUnique({ where: { code: orderCode } });
+
+                    if (order) {
+                        const newPaid = Math.max(0, (order.paid || 0) - transaction.amount);
+                        // If it was a SALE income or PURCHASE expense
+                        // INCOME -> Customer paid us. Deleting it means they haven't paid.
+                        // EXPENSE -> We paid Supplier. Deleting it means we haven't paid.
+                        // Logic holds for both.
+                        await tx.order.update({
+                            where: { id: order.id },
+                            data: { paid: newPaid }
+                        });
+                    }
+                }
+            }
         });
 
         revalidatePath("/finance");
         revalidatePath("/customers");
         revalidatePath("/suppliers");
+        revalidatePath("/orders");
         return { success: true };
     } catch (e) {
         return { success: false, error: "Failed to delete transaction" };
