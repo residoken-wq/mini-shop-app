@@ -193,15 +193,32 @@ export async function deleteTransaction(id: string) {
                     const orderCode = orderCodeMatch[1];
                     const order = await tx.order.findUnique({ where: { code: orderCode } });
 
+
                     if (order) {
-                        const newPaid = Math.max(0, (order.paid || 0) - transaction.amount);
-                        // If it was a SALE income or PURCHASE expense
-                        // INCOME -> Customer paid us. Deleting it means they haven't paid.
-                        // EXPENSE -> We paid Supplier. Deleting it means we haven't paid.
-                        // Logic holds for both.
+                        // Recalculate Paid Amount from scratch to ensure accuracy
+                        // We fetch all REMAINING transactions that mention this order code
+                        const relatedTransactions = await tx.transaction.findMany({
+                            where: {
+                                description: { contains: orderCode }
+                            }
+                        });
+
+                        let totalPaid = 0;
+                        if (order.type === "SALE") {
+                            // For SALE, we count INCOME as payment from customer
+                            totalPaid = relatedTransactions
+                                .filter(t => t.type === "INCOME")
+                                .reduce((sum, t) => sum + t.amount, 0);
+                        } else if (order.type === "PURCHASE") {
+                            // For PURCHASE, we count EXPENSE as payment to supplier
+                            totalPaid = relatedTransactions
+                                .filter(t => t.type === "EXPENSE")
+                                .reduce((sum, t) => sum + t.amount, 0);
+                        }
+
                         await tx.order.update({
                             where: { id: order.id },
-                            data: { paid: newPaid }
+                            data: { paid: totalPaid }
                         });
                     }
                 }
