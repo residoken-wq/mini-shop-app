@@ -63,9 +63,9 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
                                         dangerouslySetInnerHTML={{ __html: promo.description }}
                                     />
                                 )}
-                                 // <p className="text-xs text-gray-500 mt-1">
+                                {/* <p className="text-xs text-gray-500 mt-1">
                                    // Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
-                                // </p>
+                                // </p> */}
                             </div>
                         </div>
                         {/* Show promotional products */}
