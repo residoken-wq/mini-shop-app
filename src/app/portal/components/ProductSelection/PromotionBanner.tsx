@@ -1,6 +1,6 @@
 "use client";
 
-import { Gift, Percent } from "lucide-react";
+import { Percent } from "lucide-react";
 import { Promotion, formatCurrency } from "../../types";
 
 interface PromotionBannerProps {
@@ -49,10 +49,7 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
 
     return (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-amber-700">
-                <Gift className="w-5 h-5" />
-                <span className="font-semibold">Chương trình khuyến mãi</span>
-            </div>
+
             <div className="space-y-2">
                 {promotions.map((promo) => (
                     <div key={promo.id} className="bg-white/60 rounded-lg p-3">
@@ -66,9 +63,9 @@ export function PromotionBanner({ promotions }: PromotionBannerProps) {
                                         dangerouslySetInnerHTML={{ __html: promo.description }}
                                     />
                                 )}
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
-                                </p>
+                                 // <p className="text-xs text-gray-500 mt-1">
+                                   // Đến {new Date(promo.endDate).toLocaleDateString('vi-VN')}
+                                // </p>
                             </div>
                         </div>
                         {/* Show promotional products */}
