@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle, Edit, ChevronLeft, Calendar, MessageSquare, Printer } from "lucide-react";
+import { Search, Eye, Trash2, Package, ShoppingCart, Truck, Download, Loader2, ChevronRight, CheckCircle, Clock, XCircle, Edit, ChevronLeft, Calendar, MessageSquare, Printer, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { deleteOrder, updateOrderStatus, getOrders, addOrderPayment } from "./actions";
+import { deleteOrder, updateOrderStatus, getOrders, addOrderPayment, recalculateAllOrdersPaid } from "./actions";
 import { ORDER_STATUSES, OrderStatus, getAllowedNextStatuses } from "./order-constants";
 import { OrderReceipt } from "./order-receipt";
 import { OrderEditableItems } from "./order-editable-items";
@@ -308,9 +308,30 @@ export function OrdersClient({ initialOrders, expensesTotal, shopSettings }: Ord
                     <Button size="sm" variant={dateFilter === "MONTH" ? "default" : "outline"} onClick={() => handleDateFilterChange("MONTH")}>
                         30 ngày
                     </Button>
-                    <span className="ml-auto text-sm text-muted-foreground">
-                        Hiển thị {paginatedOrders.length} / {filteredOrders.length} đơn
-                    </span>
+                    <div className="ml-auto flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                            Hiển thị {paginatedOrders.length} / {filteredOrders.length} đơn
+                        </span>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-muted-foreground hover:text-blue-600"
+                            onClick={async () => {
+                                const result = await recalculateAllOrdersPaid();
+                                if (result.success) {
+                                    alert(`Đã cập nhật ${(result as any).updatedCount}/${(result as any).totalChecked} đơn hàng`);
+                                    const newOrders = await getOrders();
+                                    setOrders(newOrders);
+                                } else {
+                                    alert("Lỗi: " + (result as any).error);
+                                }
+                            }}
+                            title="Tính lại thanh toán từ lịch sử thu chi"
+                        >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Tính lại TT
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Pending Orders Preparation Section */}

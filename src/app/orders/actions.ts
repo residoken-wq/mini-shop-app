@@ -1174,3 +1174,51 @@ export async function addOrderPayment(data: {
         return { success: false, error: "Lỗi thêm thanh toán" };
     }
 }
+
+export async function recalculateAllOrdersPaid() {
+    try {
+        const orders = await db.order.findMany({
+            where: {
+                status: { not: "CANCELLED" }
+            },
+            select: { id: true, code: true, type: true, paid: true, total: true }
+        });
+
+        let updatedCount = 0;
+
+        for (const order of orders) {
+            // Find all transactions that reference this order code
+            const relatedTransactions = await db.transaction.findMany({
+                where: {
+                    description: { contains: order.code }
+                }
+            });
+
+            let totalPaid = 0;
+            if (order.type === "SALE") {
+                totalPaid = relatedTransactions
+                    .filter((t: any) => t.type === "INCOME")
+                    .reduce((sum: number, t: any) => sum + t.amount, 0);
+            } else if (order.type === "PURCHASE") {
+                totalPaid = relatedTransactions
+                    .filter((t: any) => t.type === "EXPENSE")
+                    .reduce((sum: number, t: any) => sum + t.amount, 0);
+            }
+
+            // Only update if different
+            if (Math.abs((order.paid || 0) - totalPaid) > 0.01) {
+                await db.order.update({
+                    where: { id: order.id },
+                    data: { paid: totalPaid }
+                });
+                updatedCount++;
+            }
+        }
+
+        revalidatePath("/orders");
+        return { success: true, updatedCount, totalChecked: orders.length };
+    } catch (error) {
+        console.error("Recalculate orders paid error:", error);
+        return { success: false, error: "Lỗi tính lại thanh toán" };
+    }
+}
